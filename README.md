@@ -33,7 +33,7 @@ node >= 14.0.0
 npm >= 6.14.0
 ```
 
-### Installation
+### Installation (For the love of God dont do this rn we are in alpha phase)
 
 1. Clone the repository
 ```bash

@@ -25,43 +25,11 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
         uint256[] memory zoneCapacities,
         uint256[] memory zonePrices
     ) external override whenNotPaused returns (uint256) {
-        require(date > block.timestamp, "Event date must be in the future");
-        require(zoneCapacities.length == zonePrices.length, "Zone arrays must match");
-        require(zoneCapacities.length > 0, "Must have at least one zone");
-
-        _eventIds.increment();
-        uint256 newEventId = _eventIds.current();
-
-        _events[newEventId] = Event({
-            name: name,
-            date: date,
-            basePrice: basePrice,
-            organizer: msg.sender,
-            cancelled: false,
-            zoneCapacities: zoneCapacities,
-            zonePrices: zonePrices
-        });
-
-        // Initialize zones
-        for (uint256 i = 0; i < zoneCapacities.length; i++) {
-            _eventZones[newEventId][i] = Zone({
-                capacity: zoneCapacities[i],
-                price: zonePrices[i],
-                availableSeats: zoneCapacities[i]
-            });
-        }
-
-        emit EventCreated(newEventId, name, date, msg.sender);
-        return newEventId;
+        
     }
 
     function cancelEvent(uint256 eventId) external override whenNotPaused {
-        Event storage eventDetails = _events[eventId];
-        require(msg.sender == eventDetails.organizer, "Only organizer can cancel");
-        require(!eventDetails.cancelled, "Event already cancelled");
         
-        eventDetails.cancelled = true;
-        emit EventCancelled(eventId);
     }
 
     function purchaseTicket(uint256 eventId, uint256 zoneId) 
@@ -71,30 +39,7 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
         nonReentrant 
         whenNotPaused 
     {
-        Event storage eventDetails = _events[eventId];
-        require(!eventDetails.cancelled, "Event is cancelled");
-        require(eventDetails.date > block.timestamp, "Event has already occurred");
-        require(!_hasTicket[eventId][msg.sender], "Already has ticket");
-
-        Zone storage zone = _eventZones[eventId][zoneId];
-        require(zone.availableSeats > 0, "Zone is sold out");
-        require(msg.value == zone.price, "Incorrect payment amount");
-
-        // Calculate platform fee
-        uint256 platformFee = (msg.value * PLATFORM_FEE_PERCENTAGE) / 100;
-        uint256 organizerPayment = msg.value - platformFee;
-
-        // Transfer payments
-        (bool organizerSuccess, ) = payable(eventDetails.organizer).call{value: organizerPayment}("");
-        (bool ownerSuccess, ) = payable(owner()).call{value: platformFee}("");
-        
-        require(organizerSuccess && ownerSuccess, "Transfer failed");
-
-        // Update state
-        zone.availableSeats--;
-        _hasTicket[eventId][msg.sender] = true;
-
-        emit TicketPurchased(eventId, _eventIds.current(), msg.sender);
+       
     }
 
     function getEvent(uint256 eventId) external view override returns (Event memory) {

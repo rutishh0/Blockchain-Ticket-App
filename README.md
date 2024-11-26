@@ -24,6 +24,8 @@ A decentralized event ticketing platform built on blockchain technology, designe
 
 ## 🚀 Quick Start
 
+/Summary TBA/
+
 ### Prerequisites
 
 ```bash
@@ -100,7 +102,7 @@ npm run coverage
 
 ## 🤝 Contributing
 
-This is a coursework project for COMP0163 Blockchain Technologies. Contributions are welcome from team members.
+This is a coursework project for COMP0163 Blockchain Technologies. Contributing members of this team belong to Group B.
 
 ### Team Members
 - Rutishkrishna Srinivasaraghavan
@@ -118,6 +120,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - COMP0163 Course Team
 - [Ethereum Community](https://ethereum.org/)
 - [OpenZeppelin](https://openzeppelin.com/) for secure contract implementations
+- [Yoda](https://youtu.be/BQ4yd2W50No?t=18) for sage advice on debugging ("Do or do not, there is no try").
 
 ---
 <div align="center">

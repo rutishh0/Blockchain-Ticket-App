@@ -13,7 +13,6 @@ A decentralized event ticketing platform built on blockchain technology, designe
 - **Automated Refunds**: Instant refunds for cancelled events
 - **Fair Distribution**: Transparent ticket allocation system
 - **Secure Authentication**: Blockchain-based ticket verification
-- **Dynamic Pricing Controls**: Zone-based pricing with automated price management
 
 ## 🏗️ Technology Stack
 

@@ -3,11 +3,9 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract TicketFactory is ERC721, Ownable {
-    using Counters for Counters.Counter;
-    Counters.Counter private _tokenIds;
+    uint256 private _tokenIds;
 
     struct Event {
         uint256 maxSupply;
@@ -32,7 +30,6 @@ contract TicketFactory is ERC721, Ownable {
 
     constructor() ERC721("Event Ticket", "TCKT") Ownable(msg.sender) {}
 
-    // Creates a new event
     function createEvent(
         uint256 eventId,
         uint256 maxSupply,
@@ -52,7 +49,6 @@ contract TicketFactory is ERC721, Ownable {
         emit EventCreated(eventId, maxSupply, price);
     }
 
-    // Issues a new ticket
     function issueTicket(
         address to,
         uint256 eventId,
@@ -62,8 +58,8 @@ contract TicketFactory is ERC721, Ownable {
         require(event_.isActive, "Event not active");
         require(event_.currentSupply < event_.maxSupply, "Event sold out");
 
-        _tokenIds.increment();
-        uint256 newTokenId = _tokenIds.current();
+        _tokenIds++;
+        uint256 newTokenId = _tokenIds;
 
         _mint(to, newTokenId);
         tickets[newTokenId] = Ticket({
@@ -79,7 +75,6 @@ contract TicketFactory is ERC721, Ownable {
         return newTokenId;
     }
 
-    // Gets ticket details
     function getTicketDetails(uint256 tokenId) 
         public 
         view 
@@ -99,7 +94,6 @@ contract TicketFactory is ERC721, Ownable {
         );
     }
 
-    // Marks ticket as used
     function useTicket(uint256 tokenId) public {
         require(ownerOf(tokenId) == msg.sender, "Not ticket owner");
         require(!tickets[tokenId].used, "Ticket already used");

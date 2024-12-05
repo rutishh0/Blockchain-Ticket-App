@@ -20,6 +20,9 @@ modifier onlyOwner () {
 
 modifier inState (ConditionStatus _state) {
     require(conditionStatus == _state, "Invalid state for this action");
+    _;
+
+
 
 
 

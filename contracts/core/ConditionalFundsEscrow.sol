@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -13,7 +13,7 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
 
     struct Payment {
         address payer;
-        uint amount;
+        uint256 amount;
         PaymentStatus status;
         bool waitlistRefundEnabled;
     }
@@ -35,20 +35,20 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
         nonReentrant
         whenNotPaused
     {
-    require(msg.value > 0, "Payment required");
-    require(payments[eventId][ticketId].payer == address(0), "Payment exists");
+        require(msg.value > 0, "Payment required");
+        require(payments[eventId][ticketId].payer == address(0), "Payment exists");
 
-    payments[eventId][ticketId] = Payment({
-        payer: msg.sender,
-        amount: msg.value,
-        status: PaymentStatus.Pending,
-        waitlistRefundEnabled: false
-    });
+        payments[eventId][ticketId] = Payment({
+            payer: msg.sender,
+            amount: msg.value,
+            status: PaymentStatus.Pending,
+            waitlistRefundEnabled: false
+        });
 
         emit PaymentDeposited(eventId, msg.sender, msg.value);
     }
 
-    function releasePayment(uint256 eventId, uint256 tickketId)
+    function releasePayment(uint256 eventId, uint256 ticketId)
         external
         override
         nonReentrant
@@ -58,7 +58,7 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
         Payment storage payment = payments[eventId][ticketId];
         require(payment.status == PaymentStatus.Pending, "Invalid payment status");
 
-        // if the event has ended
+        // Verify that the event has concluded
         require(
             IEventManager(_eventManager).hasEventConcluded(eventId),
             "Event conditions not met for release"
@@ -66,79 +66,73 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
 
         payment.status = PaymentStatus.Released;
 
-        // sending money to the event organizer
-        address organaizer = IEventManager(_eventManager).getOrganizer(eventId);
-        (bool success, ) = payable(organizer). call{value: payment.amount}("");
+        // Send funds to the event organizer
+        address organizer = IEventManager(_eventManager).getOrganizer(eventId);
+        (bool success, ) = payable(organizer).call{value: payment.amount}("");
         require(success, "Release transfer failed");
 
         emit PaymentReleased(eventId, payment.payer, payment.amount);
-     }
+    }
 
-     function refundPayment(uint256 eventId, uint256 ticketId)
-         external
-         override
-         nonReentrant
-         whenNotPaused
-     {
-         Payment storage payment == payments[eventId][ticketId];
-         require(payment.status == PaymentStatus.Pending, "Invalid payment status");
-         require(payment.payer == msg.sender, "Not the payer"); 
+    function refundPayment(uint256 eventId, uint256 ticketId)
+        external
+        override
+        nonReentrant
+        whenNotPaused
+    {
+        Payment storage payment = payments[eventId][ticketId];
+        require(payment.status == PaymentStatus.Pending, "Invalid payment status");
+        require(payment.payer == msg.sender, "Not the payer");
 
-         uint256 amount = payment.amount;
-         payment.status = PaymentStatus.Refunded;
+        uint256 amount = payment.amount;
+        payment.status = PaymentStatus.Refunded;
 
-         (bool success,) = payable.amount;
-         require(success, "Refund transfer failed");
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Refund transfer failed");
 
-         emit PaymentRefunded(eventId, msg.sender, amount);
-     }
+        emit PaymentRefunded(eventId, msg.sender, amount);
+    }
 
-     function enableWaitlistRefund(uint256 eventId, uint256 ticketId)
-         external
-         override
-         whenNotPaused
-     {
-         Payment storage payment == payments[eventId][ticketId];
-         require(payment.status == PaymentStatus.Pending, "Invalid payment status");
-         require(payment.payer == msg.sender, "Not the payer"); 
+    function enableWaitlistRefund(uint256 eventId, uint256 ticketId)
+        external
+        override
+        whenNotPaused
+    {
+        Payment storage payment = payments[eventId][ticketId];
+        require(payment.status == PaymentStatus.Pending, "Invalid payment status");
+        require(payment.payer == msg.sender, "Not the payer");
 
-         payment.waitlistRefundEnabled = true;
-         emit WaitlistRefundEnabled(eventId, ticketId);
-     }
+        payment.waitlistRefundEnabled = true;
+        emit WaitlistRefundEnabled(eventId, ticketId);
+    }
 
-     function getPaymentStatus(uint256 eventId, uint256 ticketId)
-         external
-         view
-         override
-         returns (PaymentStatus)
+    function getPaymentStatus(uint256 eventId, uint256 ticketId)
+        external
+        view
+        override
+        returns (PaymentStatus)
+    {
+        return payments[eventId][ticketId].status;
+    }
 
-     {
-         return payments[eventId][ticketId].status;
-     }
+    function getPaymentAmount(uint256 eventId, uint256 ticketId)
+        external
+        view
+        returns (uint256)
+    {
+        return payments[eventId][ticketId].amount;
+    }
 
-     fucntion getPaymentAmount(uint256 eventId, uint256 ticketId)
-         external
-         view
-         override
-         returns (uint256)
-     { 
-         return payments[eventId][ticketId].amount;
-     }
+    function pause() external onlyOwner {
+        _pause();
+    }
 
-     function pause() external onlyOwner {
-         _pause();
-     }
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 
-     function unpause() external onlyOwner {
-         _unpause();
-     }
-
-     function withdrawStuckFunds() external onlyOwner {
-         (bool success, ) = payable(owner()).call{value: address(this).balance}("");
-         require(success, "Transfer failed");
-     }
+    function withdrawStuckFunds() external onlyOwner {
+        (bool success, ) = payable(owner()).call{value: address(this).balance}("");
+        require(success, "Transfer failed");
+    }
 }
-
-     
-    
-      

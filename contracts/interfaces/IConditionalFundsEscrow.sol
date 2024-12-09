@@ -14,5 +14,5 @@ function releasePayment(uint256 eventId, uint256 ticketId) external;
 function refundPayment(uint256 eventId, uint256 ticketId) external; 
 function enableWaitlistRefund(uint256 eventId, uint256 ticketId) external;
 function getPaymentStatus(uint256 eventId, uint256 ticketId) external view returns (PaymentStatus);
-function getPaymontAmount(uint256 eventId, uint256 ticketId) external view returns (uint256);
+function getPaymentAmount(uint256 eventId, uint256 ticketId) external view returns (uint256);
 }

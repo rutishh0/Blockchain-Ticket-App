@@ -15,4 +15,5 @@ interface IRefundEscrow {
     function enableWaitlistRefund(uint256 eventId, uint256 ticketId) external;
     function getPaymentStatus(uint256 eventId, uint256 ticketId) external view returns (PaymentStatus);
     function getPaymentAmount(uint256 eventId, uint256 ticketId) external view returns (uint256);
+    function cancelEvent(uint256 eventId) external;
 }

@@ -46,10 +46,12 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
     event TicketResold(uint256 indexed tokenId, address indexed buyer, uint256 price);
 
     constructor(address waitlistManagerAddress) ERC721("Event Ticket", "TCKT") Ownable(msg.sender) {
+        require(waitlistManagerAddress != address(0), "Invalid waitlist manager address");
         waitlistManager = IWaitlistManager(waitlistManagerAddress);
     }
 
     function setWaitlistManager(address newWaitlistManager) external onlyOwner {
+        require(newWaitlistManager != address(0), "Invalid address");
         waitlistManager = IWaitlistManager(newWaitlistManager);
     }
 
@@ -57,7 +59,7 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         uint256 eventId,
         uint256 maxSupply,
         uint256 price
-    ) public onlyOwner {
+    ) external onlyOwner {
         require(!events[eventId].isActive, "Event already exists");
         require(maxSupply > 0, "Invalid supply");
         require(price > 0, "Invalid price");
@@ -76,18 +78,10 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         address to,
         uint256 eventId,
         uint256 seatNumber
-    ) public onlyOwner returns (uint256) {
+    ) external onlyOwner returns (uint256) {
         Event storage event_ = events[eventId];
         require(event_.isActive, "Event not active");
         require(event_.currentSupply < event_.maxSupply, "Event sold out");
-
-        if (event_.currentSupply >= event_.maxSupply - 1) {
-            address nextInLine = waitlistManager.getNextWaitingUser(eventId, 0);
-            require(
-                to == nextInLine || nextInLine == address(0), 
-                "Must issue to waitlist"
-            );
-        }
 
         _tokenIds++;
         uint256 newTokenId = _tokenIds;
@@ -108,6 +102,7 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         if (waitlistManager.isUserWaiting(eventId, 0, to)) {
             emit WaitlistTicketIssued(newTokenId, eventId, to);
         }
+
         emit TicketMinted(newTokenId, eventId, event_.price);
         return newTokenId;
     }
@@ -125,10 +120,13 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
 
         uint256 platformFee = (event_.price * PLATFORM_FEE_PERCENTAGE) / 100;
         uint256 refundAmount = msg.value - event_.price;
-        
-        payable(owner()).transfer(platformFee);
+
+        (bool platformSuccess, ) = payable(owner()).call{value: platformFee}("");
+        require(platformSuccess, "Platform fee transfer failed");
+
         if (refundAmount > 0) {
-            payable(msg.sender).transfer(refundAmount);
+            (bool refundSuccess, ) = payable(msg.sender).call{value: refundAmount}("");
+            require(refundSuccess, "Refund transfer failed");
         }
 
         _tokenIds++;
@@ -175,13 +173,12 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         address seller = ownerOf(tokenId);
         uint256 platformFee = (msg.value * PLATFORM_FEE_PERCENTAGE) / 100;
         uint256 sellerPayment = msg.value - platformFee;
-        uint256 refundAmount = msg.value - ticket.resalePrice;
 
-        payable(owner()).transfer(platformFee);
-        payable(seller).transfer(sellerPayment);
-        if (refundAmount > 0) {
-            payable(msg.sender).transfer(refundAmount);
-        }
+        (bool platformSuccess, ) = payable(owner()).call{value: platformFee}("");
+        require(platformSuccess, "Platform fee transfer failed");
+
+        (bool sellerSuccess, ) = payable(seller).call{value: sellerPayment}("");
+        require(sellerSuccess, "Seller transfer failed");
 
         _transfer(seller, msg.sender, tokenId);
         ticket.isResale = false;

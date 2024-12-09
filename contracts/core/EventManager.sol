@@ -9,26 +9,8 @@ import "../interfaces/IRefundEscrow.sol";
 
 contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
     uint256 private _eventIds;
+    uint256 private _ticketIds;
     IRefundEscrow public refundEscrow;
-
-    struct Event {
-        string name;
-        uint256 date;
-        uint256 basePrice;
-        address organizer;
-        bool cancelled;
-        uint256[] zoneCapacities;
-        uint256[] zonePrices;
-        uint256 totalRevenue;
-        uint256 refundDeadline;
-    }
-
-    struct Zone {
-        uint256 capacity;
-        uint256 price;
-        uint256 availableSeats;
-        uint256 revenue;
-    }
 
     mapping(uint256 => Event) private _events;
     mapping(uint256 => mapping(uint256 => Zone)) private _eventZones;
@@ -73,9 +55,7 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
             organizer: msg.sender,
             cancelled: false,
             zoneCapacities: zoneCapacities,
-            zonePrices: zonePrices,
-            totalRevenue: 0,
-            refundDeadline: date - CANCELLATION_WINDOW
+            zonePrices: zonePrices
         });
 
         for (uint256 i = 0; i < zoneCapacities.length; i++) {
@@ -83,8 +63,7 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
             _eventZones[newEventId][i] = Zone({
                 capacity: zoneCapacities[i],
                 price: zonePrices[i],
-                availableSeats: zoneCapacities[i],
-                revenue: 0
+                availableSeats: zoneCapacities[i]
             });
         }
 
@@ -121,20 +100,26 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
         require(zone.availableSeats > 0, "Zone sold out");
         require(msg.value >= zone.price, "Insufficient payment");
         
+        uint256 ticketId = ++_ticketIds;
         zone.availableSeats--;
-        zone.revenue += msg.value;
         _hasTicket[eventId][msg.sender] = true;
         
         uint256 platformFee = (msg.value * PLATFORM_FEE_PERCENTAGE) / 100;
         uint256 organizerPayment = msg.value - platformFee;
         
         _eventRevenue[eventId] += organizerPayment;
-        event_.totalRevenue += msg.value;
-        
+
+        // Refund excess payment
+        if (msg.value > zone.price) {
+            uint256 excess = msg.value - zone.price;
+            (bool refundSuccess, ) = payable(msg.sender).call{value: excess}("");
+            require(refundSuccess, "Refund failed");
+        }
+
         // Deposit payment to escrow
-        refundEscrow.depositPayment{value: msg.value}(eventId, _eventIds);
+        refundEscrow.depositPayment{value: zone.price}(eventId, ticketId);
         
-        emit TicketPurchased(eventId, _eventIds, msg.sender);
+        emit TicketPurchased(eventId, ticketId, msg.sender);
     }
 
     function withdrawEventRevenue(uint256 eventId) external nonReentrant {
@@ -159,6 +144,14 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
 
     function getZone(uint256 eventId, uint256 zoneId) external view override returns (Zone memory) {
         return _eventZones[eventId][zoneId];
+    }
+
+    function hasEventConcluded(uint256 eventId) external view override returns (bool) {
+        return block.timestamp > _events[eventId].date;
+    }
+
+    function getOrganizer(uint256 eventId) external view override returns (address) {
+        return _events[eventId].organizer;
     }
 
     function getEventRevenue(uint256 eventId) external view returns (uint256) {

@@ -8,6 +8,9 @@ import "../interfaces/IRefundEscrow.sol";
 import "../interfaces/IEventManager.sol";
 
 contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
+    event TicketCancelled(uint256 indexed eventId, uint256 indexed ticketId, uint256 refundAmount);
+    event EventCancelled(uint256 indexed eventId);
+    event EventCancellationRefunded(uint256 indexed eventId, uint256 indexed ticketId, uint256 refundAmount);
     address private immutable _eventManager;
     mapping(uint256 => mapping(uint256 => Payment)) private payments;
     mapping(uint256 => bool) private eventCancelled;

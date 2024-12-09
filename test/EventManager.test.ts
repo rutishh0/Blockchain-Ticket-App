@@ -1,34 +1,37 @@
+// SPDX-License-Identifier: MIT
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { EventManager } from "../typechain-types";
+import { EventManager, RefundEscrow } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("EventManager", function () {
   let eventManager: EventManager;
+  let refundEscrow: RefundEscrow;
   let owner: SignerWithAddress;
   let organizer: SignerWithAddress;
   let buyer: SignerWithAddress;
+  let buyer2: SignerWithAddress;
 
   beforeEach(async function () {
-    [owner, organizer, buyer] = await ethers.getSigners();
+    [owner, organizer, buyer, buyer2] = await ethers.getSigners();
     
     const EventManager = await ethers.getContractFactory("EventManager");
     eventManager = await EventManager.deploy();
     await eventManager.waitForDeployment();
+
+    const RefundEscrow = await ethers.getContractFactory("RefundEscrow");
+    refundEscrow = await RefundEscrow.deploy(await eventManager.getAddress());
+    await eventManager.setRefundEscrow(await refundEscrow.getAddress());
   });
 
   describe("Event Creation", function () {
-    it("Should create a new event with zones", async function () {
-      const currentTime = await time.latest();
-      const eventDate = currentTime + 86400; // 1 day from now
-      const basePrice = ethers.parseEther("0.1");
-      const zoneCapacities = [100, 200];
-      const zonePrices = [
-        ethers.parseEther("0.2"),
-        ethers.parseEther("0.1")
-      ];
+    const basePrice = ethers.parseEther("0.1");
+    const zoneCapacities = [100, 200];
+    const zonePrices = [ethers.parseEther("0.2"), ethers.parseEther("0.1")];
 
+    it("Should create event with correct parameters", async function () {
+      const eventDate = await time.latest() + 86400;
       await eventManager.connect(organizer).createEvent(
         "Test Event",
         eventDate,
@@ -39,20 +42,42 @@ describe("EventManager", function () {
 
       const event = await eventManager.getEvent(1);
       expect(event.name).to.equal("Test Event");
+      expect(event.basePrice).to.equal(basePrice);
       expect(event.organizer).to.equal(organizer.address);
-      expect(event.cancelled).to.be.false;
+    });
 
-      const zone0 = await eventManager.getZone(1, 0);
-      expect(zone0.capacity).to.equal(100);
-      expect(zone0.price).to.equal(ethers.parseEther("0.2"));
-      expect(zone0.availableSeats).to.equal(100);
+    it("Should reject invalid dates", async function () {
+      const pastDate = await time.latest() - 86400;
+      await expect(
+        eventManager.connect(organizer).createEvent(
+          "Test Event",
+          pastDate,
+          basePrice,
+          zoneCapacities,
+          zonePrices
+        )
+      ).to.be.revertedWith("Invalid date");
+    });
+
+    it("Should validate zone prices", async function () {
+      const eventDate = await time.latest() + 86400;
+      const lowZonePrices = [ethers.parseEther("0.05"), ethers.parseEther("0.05")];
+      
+      await expect(
+        eventManager.connect(organizer).createEvent(
+          "Test Event",
+          eventDate,
+          basePrice,
+          zoneCapacities,
+          lowZonePrices
+        )
+      ).to.be.revertedWith("Zone price below base");
     });
   });
 
   describe("Ticket Purchase", function () {
     beforeEach(async function () {
-      const currentTime = await time.latest();
-      const eventDate = currentTime + 86400;
+      const eventDate = await time.latest() + 86400;
       await eventManager.connect(organizer).createEvent(
         "Test Event",
         eventDate,
@@ -62,20 +87,124 @@ describe("EventManager", function () {
       );
     });
 
-    it("Should allow ticket purchase", async function () {
-      const initialBalance = await ethers.provider.getBalance(organizer.address);
-      
+    it("Should process ticket purchase with fees", async function () {
+      const purchasePrice = ethers.parseEther("0.1");
+      const platformFee = (purchasePrice * 5n) / 100n;
+      const organizerPayment = purchasePrice - platformFee;
+
+      const initialOrganizerBalance = await ethers.provider.getBalance(organizer.address);
+      const initialOwnerBalance = await ethers.provider.getBalance(owner.address);
+
+      await eventManager.connect(buyer).purchaseTicket(1, 0, {
+        value: purchasePrice
+      });
+
+      const finalOrganizerBalance = await ethers.provider.getBalance(organizer.address);
+      const finalOwnerBalance = await ethers.provider.getBalance(owner.address);
+
+      expect(finalOrganizerBalance - initialOrganizerBalance).to.equal(organizerPayment);
+      expect(finalOwnerBalance - initialOwnerBalance).to.equal(platformFee);
+    });
+
+    it("Should prevent multiple purchases by same buyer", async function () {
+      await eventManager.connect(buyer).purchaseTicket(1, 0, {
+        value: ethers.parseEther("0.1")
+      });
+
+      await expect(
+        eventManager.connect(buyer).purchaseTicket(1, 0, {
+          value: ethers.parseEther("0.1")
+        })
+      ).to.be.revertedWith("Already has ticket");
+    });
+
+    it("Should track zone capacity", async function () {
       await eventManager.connect(buyer).purchaseTicket(1, 0, {
         value: ethers.parseEther("0.1")
       });
 
       const zone = await eventManager.getZone(1, 0);
       expect(zone.availableSeats).to.equal(99);
+    });
+  });
 
-      // Check organizer received payment minus platform fee
+  describe("Event Cancellation", function () {
+    beforeEach(async function () {
+      const eventDate = await time.latest() + 86400;
+      await eventManager.connect(organizer).createEvent(
+        "Test Event",
+        eventDate,
+        ethers.parseEther("0.1"),
+        [100],
+        [ethers.parseEther("0.1")]
+      );
+    });
+
+    it("Should allow organizer to cancel event", async function () {
+      await eventManager.connect(organizer).cancelEvent(1);
+      const event = await eventManager.getEvent(1);
+      expect(event.cancelled).to.be.true;
+    });
+
+    it("Should prevent purchases after cancellation", async function () {
+      await eventManager.connect(organizer).cancelEvent(1);
+      await expect(
+        eventManager.connect(buyer).purchaseTicket(1, 0, {
+          value: ethers.parseEther("0.1")
+        })
+      ).to.be.revertedWith("Event cancelled");
+    });
+
+    it("Should only allow organizer or owner to cancel", async function () {
+      await expect(
+        eventManager.connect(buyer).cancelEvent(1)
+      ).to.be.revertedWith("Unauthorized");
+    });
+  });
+
+  describe("Revenue Management", function () {
+    beforeEach(async function () {
+      const eventDate = await time.latest() + 86400;
+      await eventManager.connect(organizer).createEvent(
+        "Test Event",
+        eventDate,
+        ethers.parseEther("0.1"),
+        [100],
+        [ethers.parseEther("0.1")]
+      );
+    });
+
+    it("Should track event revenue", async function () {
+      await eventManager.connect(buyer).purchaseTicket(1, 0, {
+        value: ethers.parseEther("0.1")
+      });
+
+      const revenue = await eventManager.getEventRevenue(1);
+      expect(revenue).to.equal(ethers.parseEther("0.095")); // 95% of 0.1 ETH
+    });
+
+    it("Should allow revenue withdrawal after event", async function () {
+      await eventManager.connect(buyer).purchaseTicket(1, 0, {
+        value: ethers.parseEther("0.1")
+      });
+
+      await time.increase(86401); // One day + 1 second
+
+      const initialBalance = await ethers.provider.getBalance(organizer.address);
+      await eventManager.connect(organizer).withdrawEventRevenue(1);
       const finalBalance = await ethers.provider.getBalance(organizer.address);
-      const expectedPayment = ethers.parseEther("0.095"); // 95% of 0.1 ETH
-      expect(finalBalance - initialBalance).to.equal(expectedPayment);
+
+      expect(finalBalance > initialBalance).to.be.true;
+    });
+  });
+
+  describe("Admin Functions", function () {
+    it("Should allow owner to pause/unpause", async function () {
+      await eventManager.connect(owner).pause();
+      expect(await eventManager.paused()).to.be.true;
+
+      await eventManager.connect(owner).unpause();
+      expect(await eventManager.paused()).to.be.false;
     });
   });
 });

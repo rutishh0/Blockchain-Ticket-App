@@ -10,18 +10,20 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         address user;
         uint256 timestamp;
         bool isActive;
+        bool hasOffer;
+        uint256 offerExpiry;
     }
 
     struct ZoneWaitlist {
         WaitlistEntry[] entries;
-        mapping(address => uint256) userIndex; // Maps user address to their position in waitlist
-        mapping(address => bool) isWaiting;    // Quick lookup for if user is in waitlist
+        mapping(address => uint256) userIndex;
+        mapping(address => bool) isWaiting;
     }
 
-    // eventId => zoneId => ZoneWaitlist
     mapping(uint256 => mapping(uint256 => ZoneWaitlist)) private waitlists;
     
-    // Events
+    uint256 public constant OFFER_DURATION = 24 hours;
+    
     event JoinedWaitlist(uint256 indexed eventId, uint256 indexed zoneId, address user);
     event LeftWaitlist(uint256 indexed eventId, uint256 indexed zoneId, address user);
     event WaitlistPurchaseOffered(uint256 indexed eventId, uint256 indexed zoneId, address user);
@@ -30,7 +32,6 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
 
     constructor() Ownable(msg.sender) {}
 
-    // Join the waitlist for a specific event zone
     function joinWaitlist(uint256 eventId, uint256 zoneId) 
         external 
         nonReentrant 
@@ -39,21 +40,20 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
         require(!waitlist.isWaiting[msg.sender], "Already in waitlist");
         
-        // Add new entry
         waitlist.entries.push(WaitlistEntry({
             user: msg.sender,
             timestamp: block.timestamp,
-            isActive: true
+            isActive: true,
+            hasOffer: false,
+            offerExpiry: 0
         }));
         
-        // Update mappings
         waitlist.userIndex[msg.sender] = waitlist.entries.length - 1;
         waitlist.isWaiting[msg.sender] = true;
         
         emit JoinedWaitlist(eventId, zoneId, msg.sender);
     }
 
-    // Leave the waitlist
     function leaveWaitlist(uint256 eventId, uint256 zoneId) 
         external 
         whenNotPaused 
@@ -68,7 +68,59 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         emit LeftWaitlist(eventId, zoneId, msg.sender);
     }
 
-    // Get the next person in line
+    function offerTicketToWaitlisted(uint256 eventId, uint256 zoneId, address user)
+        external
+        whenNotPaused
+    {
+        ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
+        require(waitlist.isWaiting[user], "Not in waitlist");
+        
+        uint256 index = waitlist.userIndex[user];
+        WaitlistEntry storage entry = waitlist.entries[index];
+        require(!entry.hasOffer, "Already has offer");
+        
+        entry.hasOffer = true;
+        entry.offerExpiry = block.timestamp + OFFER_DURATION;
+        
+        emit WaitlistPurchaseOffered(eventId, zoneId, user);
+    }
+
+    function completeWaitlistPurchase(uint256 eventId, uint256 zoneId)
+        external
+        whenNotPaused
+    {
+        ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
+        require(waitlist.isWaiting[msg.sender], "Not in waitlist");
+        
+        uint256 index = waitlist.userIndex[msg.sender];
+        WaitlistEntry storage entry = waitlist.entries[index];
+        require(entry.hasOffer, "No active offer");
+        require(block.timestamp <= entry.offerExpiry, "Offer expired");
+        
+        entry.isActive = false;
+        waitlist.isWaiting[msg.sender] = false;
+        
+        emit WaitlistPurchaseCompleted(eventId, zoneId, msg.sender);
+    }
+
+    function expireOffer(uint256 eventId, uint256 zoneId, address user)
+        external
+        whenNotPaused
+    {
+        ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
+        require(waitlist.isWaiting[user], "Not in waitlist");
+        
+        uint256 index = waitlist.userIndex[user];
+        WaitlistEntry storage entry = waitlist.entries[index];
+        require(entry.hasOffer, "No active offer");
+        require(block.timestamp > entry.offerExpiry, "Offer not expired");
+        
+        entry.hasOffer = false;
+        entry.offerExpiry = 0;
+        
+        emit WaitlistOfferExpired(eventId, zoneId, user);
+    }
+
     function getNextWaitingUser(uint256 eventId, uint256 zoneId) 
         external 
         view 
@@ -78,7 +130,7 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         
         for (uint256 i = 0; i < waitlist.entries.length; i++) {
             WaitlistEntry memory entry = waitlist.entries[i];
-            if (entry.isActive) {
+            if (entry.isActive && !entry.hasOffer) {
                 return entry.user;
             }
         }
@@ -86,7 +138,6 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         return address(0);
     }
 
-    // Get user's position in waitlist
     function getWaitlistPosition(uint256 eventId, uint256 zoneId, address user)
         external
         view
@@ -107,7 +158,6 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         return position;
     }
 
-    // Get total number of people on waitlist
     function getWaitlistLength(uint256 eventId, uint256 zoneId)
         external
         view
@@ -125,7 +175,6 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         return activeCount;
     }
 
-    // Check if a user is on the waitlist
     function isUserWaiting(uint256 eventId, uint256 zoneId, address user)
         external
         view
@@ -134,7 +183,19 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         return waitlists[eventId][zoneId].isWaiting[user];
     }
 
-    // Admin functions
+    function hasActiveOffer(uint256 eventId, uint256 zoneId, address user)
+        external
+        view
+        returns (bool)
+    {
+        ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
+        if (!waitlist.isWaiting[user]) return false;
+        
+        uint256 index = waitlist.userIndex[user];
+        WaitlistEntry memory entry = waitlist.entries[index];
+        return entry.hasOffer && block.timestamp <= entry.offerExpiry;
+    }
+
     function pause() external onlyOwner {
         _pause();
     }
@@ -143,7 +204,6 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         _unpause();
     }
 
-    // Emergency function to clear stuck entries
     function clearWaitlistEntry(uint256 eventId, uint256 zoneId, address user) 
         external 
         onlyOwner 

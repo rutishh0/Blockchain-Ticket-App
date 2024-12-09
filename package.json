@@ -16,6 +16,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.0.1",
     "@typechain/hardhat": "^9.1.0",
     "dotenv": "^16.4.5",
     "hardhat": "^2.22.16",
@@ -25,7 +26,6 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "5.0.1",
     "@shadcn/ui": "^0.0.4",
     "@web3-react/core": "^6.1.9",
     "@web3-react/injected-connector": "^6.0.7",

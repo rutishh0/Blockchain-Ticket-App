@@ -13,7 +13,7 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
 
     struct Payment {
         address payer;
-        uint amount;
+        uint256 amount;
         PaymentStatus status;
         bool waitlistRefundEnabled;
     }
@@ -58,17 +58,16 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
         Payment storage payment = payments[eventId][ticketId];
         require(payment.status == PaymentStatus.Pending, "Invalid payment status");
 
-        // if the event has ended
-        require(
-            IEventManager(_eventManager).hasEventConcluded(eventId),
-            "Event conditions not met for release"
-        );
+        //geting event data
+        IEventManager.Event memory evetData = IEventManager(_eventManager).getEvent(eventId);
+
+        //check that the event has not been canceled and the current time >= the date of event
+        require(block.timestamp >= eventData.date && !eventData.cancelled, "Event conditions not met for release");
 
         payment.status = PaymentStatus.Released;
 
-        // sending money to the event organizer
-        address organaizer = IEventManager(_eventManager).getOrganizer(eventId);
-        (bool success, ) = payable(organizer). call{value: payment.amount}("");
+        // sending money to the event organizer (eventData.organizer)
+        (bool success, ) = payable(eventData.organizer). call{value: payment.amount}("");
         require(success, "Release transfer failed");
 
         emit PaymentReleased(eventId, payment.payer, payment.amount);

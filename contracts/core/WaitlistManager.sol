@@ -38,7 +38,7 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         whenNotPaused 
     {
         ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
-        require(!waitlist.isWaiting[msg.sender], "Already in waitlist");
+        require(!waitlist.isWaiting[msg.sender], "Caller is already in the waitlist for this event and zone");
         
         waitlist.entries.push(WaitlistEntry({
             user: msg.sender,
@@ -59,7 +59,7 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         whenNotPaused 
     {
         ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
-        require(waitlist.isWaiting[msg.sender], "Not in waitlist");
+        require(waitlist.isWaiting[msg.sender], "Caller is not in the waitlist for this event and zone");
         
         uint256 index = waitlist.userIndex[msg.sender];
         waitlist.entries[index].isActive = false;
@@ -73,11 +73,11 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         whenNotPaused
     {
         ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
-        require(waitlist.isWaiting[user], "Not in waitlist");
+        require(waitlist.isWaiting[user], "User is not in the waitlist for this event and zone");
         
         uint256 index = waitlist.userIndex[user];
         WaitlistEntry storage entry = waitlist.entries[index];
-        require(!entry.hasOffer, "Already has offer");
+        require(!entry.hasOffer, "User already has an active ticket offer for this event and zone");
         
         entry.hasOffer = true;
         entry.offerExpiry = block.timestamp + OFFER_DURATION;
@@ -90,12 +90,12 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         whenNotPaused
     {
         ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
-        require(waitlist.isWaiting[msg.sender], "Not in waitlist");
+        require(waitlist.isWaiting[msg.sender], "Caller is not in the waitlist for this event and zone");
         
         uint256 index = waitlist.userIndex[msg.sender];
         WaitlistEntry storage entry = waitlist.entries[index];
-        require(entry.hasOffer, "No active offer");
-        require(block.timestamp <= entry.offerExpiry, "Offer expired");
+        require(entry.hasOffer, "Caller does not have an active ticket offer for this event and zone");
+        require(block.timestamp <= entry.offerExpiry, "The ticket offer for this event and zone has expired");
         
         entry.isActive = false;
         waitlist.isWaiting[msg.sender] = false;
@@ -108,12 +108,12 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         whenNotPaused
     {
         ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
-        require(waitlist.isWaiting[user], "Not in waitlist");
+        require(waitlist.isWaiting[user], "User is not in the waitlist for this event and zone");
         
         uint256 index = waitlist.userIndex[user];
         WaitlistEntry storage entry = waitlist.entries[index];
-        require(entry.hasOffer, "No active offer");
-        require(block.timestamp > entry.offerExpiry, "Offer not expired");
+        require(entry.hasOffer, "User does not have an active ticket offer for this event and zone");
+        require(block.timestamp > entry.offerExpiry, "The ticket offer for this event and zone has not expired");
         
         entry.hasOffer = false;
         entry.offerExpiry = 0;
@@ -144,7 +144,7 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         returns (uint256)
     {
         ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
-        require(waitlist.isWaiting[user], "Not in waitlist");
+        require(waitlist.isWaiting[user], "User is not in the waitlist for this event and zone");
         
         uint256 position = 1;
         uint256 userIndex = waitlist.userIndex[user];

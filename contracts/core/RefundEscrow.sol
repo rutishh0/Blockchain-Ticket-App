@@ -30,7 +30,7 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
     uint256 public constant CANCELLATION_FEE_PERCENT = 5;
 
     modifier onlyEventManager() {
-        require(msg.sender == _eventManager, "Only EventManager can call");
+        require(msg.sender == _eventManager, "Caller is not the EventManager");
         _;
     }
 
@@ -46,9 +46,9 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         nonReentrant 
         whenNotPaused 
     {
-        require(msg.value > 0, "Payment required");
-        require(payments[eventId][ticketId].payer == address(0), "Payment exists");
-        require(!eventCancelled[eventId], "Event cancelled");
+        require(msg.value > 0, "Payment amount must be greater than zero");
+        require(payments[eventId][ticketId].payer == address(0), "A payment for this ticket already exists");
+        require(!eventCancelled[eventId], "Cannot deposit payment for a cancelled event");
 
         // Store the original transaction sender
         address originalPayer = tx.origin;
@@ -72,9 +72,9 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         whenNotPaused 
     {
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.payer == originalPayers[eventId][ticketId], "Not ticket owner");
-        require(!payment.isCancelled, "Already cancelled");
-        require(block.timestamp <= payment.refundDeadline, "Refund window closed");
+        require(payment.payer == originalPayers[eventId][ticketId], "Caller is not the owner of the ticket");
+        require(!payment.isCancelled, "This ticket has already been cancelled");
+        require(block.timestamp <= payment.refundDeadline, "Refund request exceeds the allowable refund window");
 
         payment.isCancelled = true;
         uint256 refundAmount = payment.amount;
@@ -86,7 +86,7 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         }
 
         (bool success, ) = payable(msg.sender).call{value: refundAmount}("");
-        require(success, "Refund transfer failed");
+        require(success, "Transfer of refund amount to ticket owner failed");
         
         emit TicketCancelled(eventId, ticketId, refundAmount);
     }
@@ -105,16 +105,16 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         nonReentrant 
         whenNotPaused 
     {
-        require(eventCancelled[eventId], "Event not cancelled");
+        require(eventCancelled[eventId], "Refunds cannot be processed for an event that has not been cancelled");
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.payer == originalPayers[eventId][ticketId], "Not ticket owner");
-        require(!payment.isCancelled, "Already refunded");
+        require(payment.payer == originalPayers[eventId][ticketId], "Caller is not the owner of the ticket");
+        require(!payment.isCancelled, "This ticket has already been refunded");
 
         payment.isCancelled = true;
         uint256 refundAmount = payment.amount;
         
         (bool success, ) = payable(msg.sender).call{value: refundAmount}("");
-        require(success, "Refund transfer failed");
+        require(success, "Transfer of refund amount failed");
         
         emit EventCancellationRefunded(eventId, ticketId, refundAmount);
     }
@@ -127,9 +127,9 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         onlyEventManager 
     {
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.status == PaymentStatus.Pending, "Invalid payment status");
-        require(!payment.isCancelled, "Ticket cancelled");
-        require(!eventCancelled[eventId], "Event cancelled");
+        require(payment.status == PaymentStatus.Pending, "Payment must be in a Pending status to be released");
+        require(!payment.isCancelled, "Cannot release payment for a cancelled ticket");
+        require(!eventCancelled[eventId], "Cannot release payment for a cancelled event");
         
         payment.status = PaymentStatus.Released;
         emit PaymentReleased(eventId, payment.payer, payment.amount);
@@ -142,15 +142,15 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         whenNotPaused 
     {
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.status == PaymentStatus.Pending, "Invalid payment status");
-        require(msg.sender == originalPayers[eventId][ticketId], "Not the payer");
-        require(block.timestamp <= payment.refundDeadline, "Refund window closed");
+        require(payment.status == PaymentStatus.Pending, "Payment must be in a Pending status to be refunded");
+        require(msg.sender == originalPayers[eventId][ticketId], "Caller is not the payer of this ticket");
+        require(block.timestamp <= payment.refundDeadline, "Cannot refund payment as the refund window has expired");
         
         uint256 refundAmount = payment.amount;
         payment.status = PaymentStatus.Refunded;
         
         (bool success, ) = payable(msg.sender).call{value: refundAmount}("");
-        require(success, "Refund transfer failed");
+        require(success, "Transfer of refund amount to payer failed");
         
         emit PaymentRefunded(eventId, msg.sender, refundAmount);
     }
@@ -161,9 +161,9 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         whenNotPaused 
     {
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.status == PaymentStatus.Pending, "Invalid payment status");
-        require(msg.sender == originalPayers[eventId][ticketId], "Not the payer");
-        require(!payment.isCancelled, "Ticket cancelled");
+        require(payment.status == PaymentStatus.Pending, "Payment must be in a Pending status to be refunded");
+        require(msg.sender == originalPayers[eventId][ticketId], "Caller is not the payer of this ticket");
+        require(!payment.isCancelled, "Cannot enable waitlist refund for a cancelled ticket");
         
         payment.waitlistRefundEnabled = true;
         emit WaitlistRefundEnabled(eventId, ticketId);

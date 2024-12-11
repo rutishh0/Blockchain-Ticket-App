@@ -19,7 +19,7 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
     }
 
     modifier onlyEventManager() {
-        require(msg.sender == _eventManager, "Only EventManager can call");
+        require(msg.sender == _eventManager, "Caller is not the EventManager contract");
         _;
     }
 
@@ -35,8 +35,8 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
         nonReentrant
         whenNotPaused
     {
-        require(msg.value > 0, "Payment required");
-        require(payments[eventId][ticketId].payer == address(0), "Payment exists");
+        require(msg.value > 0, "Deposit amount must be greater than zero");
+        require(payments[eventId][ticketId].payer == address(0), "Payment for this ticket already exists");
 
         payments[eventId][ticketId] = Payment({
             payer: msg.sender,
@@ -56,12 +56,12 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
         onlyEventManager
     {
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.status == PaymentStatus.Pending, "Invalid payment status");
+        require(payment.status == PaymentStatus.Pending, "Payment must be in a Pending status");
 
         // Verify that the event has concluded
         require(
             IEventManager(_eventManager).hasEventConcluded(eventId),
-            "Event conditions not met for release"
+            "Event has not concluded or does not meet release conditions"
         );
 
         payment.status = PaymentStatus.Released;
@@ -69,7 +69,7 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
         // Send funds to the event organizer
         address organizer = IEventManager(_eventManager).getOrganizer(eventId);
         (bool success, ) = payable(organizer).call{value: payment.amount}("");
-        require(success, "Release transfer failed");
+        require(success, "Transfer to event organizer failed");
 
         emit PaymentReleased(eventId, payment.payer, payment.amount);
     }
@@ -81,14 +81,14 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
         whenNotPaused
     {
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.status == PaymentStatus.Pending, "Invalid payment status");
-        require(payment.payer == msg.sender, "Not the payer");
+        require(payment.status == PaymentStatus.Pending, "Payment must be in a Pending status for refund");
+        require(payment.payer == msg.sender, "Caller is not the original payer");
 
         uint256 amount = payment.amount;
         payment.status = PaymentStatus.Refunded;
 
         (bool success, ) = payable(msg.sender).call{value: amount}("");
-        require(success, "Refund transfer failed");
+        require(success, "Refund transfer to payer failed");
 
         emit PaymentRefunded(eventId, msg.sender, amount);
     }
@@ -99,8 +99,8 @@ contract ConditionalFundsEscrow is IConditionalFundsEscrow, Ownable, ReentrancyG
         whenNotPaused
     {
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.status == PaymentStatus.Pending, "Invalid payment status");
-        require(payment.payer == msg.sender, "Not the payer");
+        require(payment.status == PaymentStatus.Pending, "Payment must be in a Pending status to enable waitlist refund");
+        require(payment.payer == msg.sender, "Caller is not the original payer");
 
         payment.waitlistRefundEnabled = true;
         emit WaitlistRefundEnabled(eventId, ticketId);

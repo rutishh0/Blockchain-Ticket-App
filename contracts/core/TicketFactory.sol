@@ -46,12 +46,12 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
     event TicketResold(uint256 indexed tokenId, address indexed buyer, uint256 price);
 
     constructor(address waitlistManagerAddress) ERC721("Event Ticket", "TCKT") Ownable(msg.sender) {
-        require(waitlistManagerAddress != address(0), "Invalid waitlist manager address");
+        require(waitlistManagerAddress != address(0), "Invalid Waitlist manager address");
         waitlistManager = IWaitlistManager(waitlistManagerAddress);
     }
 
     function setWaitlistManager(address newWaitlistManager) external onlyOwner {
-        require(newWaitlistManager != address(0), "Invalid address");
+        require(newWaitlistManager != address(0), "Invalid Waitlist manager address");
         waitlistManager = IWaitlistManager(newWaitlistManager);
     }
 
@@ -60,9 +60,9 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         uint256 maxSupply,
         uint256 price
     ) external onlyOwner {
-        require(!events[eventId].isActive, "Event already exists");
-        require(maxSupply > 0, "Invalid supply");
-        require(price > 0, "Invalid price");
+        require(!events[eventId].isActive, "An active event with this ID already exists");
+        require(maxSupply > 0, "Ticket supply must be greater than zero");
+        require(price > 0, "Event ticket price must be greater than zero");
 
         events[eventId] = Event({
             maxSupply: maxSupply,
@@ -80,8 +80,8 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         uint256 seatNumber
     ) external onlyOwner returns (uint256) {
         Event storage event_ = events[eventId];
-        require(event_.isActive, "Event not active");
-        require(event_.currentSupply < event_.maxSupply, "Event sold out");
+        require(event_.isActive, "Tickets cannot be issued for an inactive event");
+        require(event_.currentSupply < event_.maxSupply, "Cannot issue tickets as the event is sold out");
 
         _tokenIds++;
         uint256 newTokenId = _tokenIds;
@@ -114,19 +114,19 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         returns (uint256) 
     {
         Event storage event_ = events[eventId];
-        require(event_.isActive, "Event not active");
-        require(event_.currentSupply < event_.maxSupply, "Event sold out");
-        require(msg.value >= event_.price, "Insufficient payment");
+        require(event_.isActive, "Tickets cannot be purchased for an inactive event");
+        require(event_.currentSupply < event_.maxSupply, "Tickets for this event are sold out");
+        require(msg.value >= event_.price, "Payment must be at least the ticket price");
 
         uint256 platformFee = (event_.price * PLATFORM_FEE_PERCENTAGE) / 100;
         uint256 refundAmount = msg.value - event_.price;
 
         (bool platformSuccess, ) = payable(owner()).call{value: platformFee}("");
-        require(platformSuccess, "Platform fee transfer failed");
+        require(platformSuccess, "Transfer of platform fee to the contract owner failed");
 
         if (refundAmount > 0) {
             (bool refundSuccess, ) = payable(msg.sender).call{value: refundAmount}("");
-            require(refundSuccess, "Refund transfer failed");
+            require(refundSuccess, "Refund of excess payment to buyer failed");
         }
 
         _tokenIds++;
@@ -166,19 +166,19 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         nonReentrant 
     {
         Ticket storage ticket = tickets[tokenId];
-        require(ticket.isResale, "Not for resale");
-        require(!ticket.used, "Ticket used");
-        require(msg.value >= ticket.resalePrice, "Insufficient payment");
+        require(ticket.isResale, "Caller is not the owner of the ticket");
+        require(!ticket.used, "Cannot list a used ticket for resale");
+        require(msg.value >= ticket.resalePrice, "Payment must be at least the resale price");
 
         address seller = ownerOf(tokenId);
         uint256 platformFee = (msg.value * PLATFORM_FEE_PERCENTAGE) / 100;
         uint256 sellerPayment = msg.value - platformFee;
 
         (bool platformSuccess, ) = payable(owner()).call{value: platformFee}("");
-        require(platformSuccess, "Platform fee transfer failed");
+        require(platformSuccess, "Transfer of platform fee to the contract owner failed");
 
         (bool sellerSuccess, ) = payable(seller).call{value: sellerPayment}("");
-        require(sellerSuccess, "Seller transfer failed");
+        require(sellerSuccess, "Transfer of payment to the ticket seller failed");
 
         _transfer(seller, msg.sender, tokenId);
         ticket.isResale = false;
@@ -216,8 +216,8 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
     }
 
     function useTicket(uint256 tokenId) public {
-        require(ownerOf(tokenId) == msg.sender, "Not ticket owner");
-        require(!tickets[tokenId].used, "Ticket already used");
+        require(ownerOf(tokenId) == msg.sender, "Caller is not the owner of the ticket");
+        require(!tickets[tokenId].used, "This ticket has already been used");
         
         tickets[tokenId].used = true;
         emit TicketUsed(tokenId);

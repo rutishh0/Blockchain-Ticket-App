@@ -33,14 +33,14 @@ contract ResaleManager is Ownable, ReentrancyGuard, Pausable {
     }
 
     function listTicketForResale(uint256 tokenId, uint256 price) external whenNotPaused {
-        require(ticketFactory.ownerOf(tokenId) == msg.sender, "Not ticket owner");
+        require(ticketFactory.ownerOf(tokenId) == msg.sender, "Caller is not the owner of the ticket");
 
         // Properly destructure the return values
         (, uint256 originalPrice, bool used, , , , ) = ticketFactory.getTicketDetails(tokenId);
 
-        require(!used, "Ticket already used");
+        require(!used, "Cannot list a ticket for Resale that has already been used");
         uint256 maxResalePrice = (originalPrice * MAX_RESALE_MARKUP) / 100;
-        require(price <= maxResalePrice, "Price exceeds max markup");
+        require(price <= maxResalePrice, "Resale price exceeds the maximum allowed markup of the original price");
 
         resaleListings[tokenId] = ResaleListing({
             seller: msg.sender,
@@ -54,8 +54,8 @@ contract ResaleManager is Ownable, ReentrancyGuard, Pausable {
 
     function cancelResaleListing(uint256 tokenId) external {
         ResaleListing storage listing = resaleListings[tokenId];
-        require(listing.seller == msg.sender, "Not seller");
-        require(listing.isActive, "Listing is not active");
+        require(listing.seller == msg.sender, "Caller is not the seller of this ticket");
+        require(listing.isActive, "Cannot cancel a resale listing that is not active");
 
         listing.isActive = false;
         emit TicketUnlisted(tokenId, msg.sender);
@@ -63,9 +63,9 @@ contract ResaleManager is Ownable, ReentrancyGuard, Pausable {
 
     function purchaseResaleTicket(uint256 tokenId) external payable nonReentrant whenNotPaused {
         ResaleListing storage listing = resaleListings[tokenId];
-        require(listing.isActive, "Listing is not active");
-        require(block.timestamp <= listing.listingTime + RESALE_TIMEOUT, "Listing expired");
-        require(msg.value >= listing.price, "Insufficient payment");
+        require(listing.isActive, "This ticket is not listed for resale");
+        require(block.timestamp <= listing.listingTime + RESALE_TIMEOUT, "This resale listing has expired");
+        require(msg.value >= listing.price, "Payment amount is less than the listed ticket price");
 
         address seller = listing.seller;
         uint256 platformFee = (listing.price * PLATFORM_FEE_PERCENTAGE) / 100;
@@ -74,15 +74,15 @@ contract ResaleManager is Ownable, ReentrancyGuard, Pausable {
         // Refund excess payment
         if (msg.value > listing.price) {
             (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - listing.price}("");
-            require(refundSuccess, "Refund failed");
+            require(refundSuccess, "Refund of excess payment to buyer failed");
         }
 
         // Transfer funds
         (bool sellerSuccess, ) = payable(seller).call{value: sellerPayment}("");
-        require(sellerSuccess, "Seller payment failed");
+        require(sellerSuccess, "Transfer of funds to the ticket seller failed");
 
         (bool platformFeeSuccess, ) = payable(owner()).call{value: platformFee}("");
-        require(platformFeeSuccess, "Platform fee transfer failed");
+        require(platformFeeSuccess, "Transfer of platform fee failed");
 
         // Transfer ticket ownership
         ticketFactory.transferFrom(seller, msg.sender, tokenId);
@@ -114,7 +114,7 @@ contract ResaleManager is Ownable, ReentrancyGuard, Pausable {
     }
 
     function setTicketFactory(address newTicketFactory) external onlyOwner {
-        require(newTicketFactory != address(0), "Invalid address");
+        require(newTicketFactory != address(0), "Invalid TicketFactory address");
         ticketFactory = ITicketFactory(newTicketFactory);
     }
 
@@ -127,6 +127,6 @@ contract ResaleManager is Ownable, ReentrancyGuard, Pausable {
     }
 
     receive() external payable {
-        revert("Direct payments not accepted");
+        revert("Direct payments are not accepted");
     }
 }

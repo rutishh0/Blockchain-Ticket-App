@@ -16,6 +16,7 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
     mapping(uint256 => mapping(uint256 => Zone)) private _eventZones;
     mapping(uint256 => mapping(address => bool)) private _hasTicket;
     mapping(uint256 => uint256) private _eventRevenue;
+    mapping(uint256 => uint256) private _zoneCount;
 
     uint256 public constant PLATFORM_FEE_PERCENTAGE = 5;
     uint256 public constant CANCELLATION_WINDOW = 14 days;
@@ -24,9 +25,9 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
     event RevenueWithdrawn(uint256 indexed eventId, address indexed organizer, uint256 amount);
     event RefundEscrowUpdated(address indexed newEscrow);
 
-    constructor(address refundEscrowAddress) Ownable(msg.sender) {
-        require(refundEscrowAddress != address(0), "Invalid escrow address");
-        refundEscrow = IRefundEscrow(refundEscrowAddress);
+    constructor() Ownable(msg.sender) {
+        _eventIds = 0;
+        _ticketIds = 0;
     }
 
     function setRefundEscrow(address newEscrow) external onlyOwner {
@@ -42,8 +43,11 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
         uint256[] memory zoneCapacities,
         uint256[] memory zonePrices
     ) external override whenNotPaused returns (uint256) {
+        require(bytes(name).length > 0, "Invalid name");
         require(date > block.timestamp + MIN_EVENT_DELAY, "Invalid date");
         require(zoneCapacities.length == zonePrices.length, "Array length mismatch");
+        require(zoneCapacities.length > 0, "No zones specified");
+        require(basePrice > 0, "Invalid base price");
         
         _eventIds++;
         uint256 newEventId = _eventIds;
@@ -54,12 +58,13 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
             basePrice: basePrice,
             organizer: msg.sender,
             cancelled: false,
-            zoneCapacities: zoneCapacities,
-            zonePrices: zonePrices
+            zoneCount: zoneCapacities.length
         });
 
         for (uint256 i = 0; i < zoneCapacities.length; i++) {
+            require(zoneCapacities[i] > 0, "Invalid zone capacity");
             require(zonePrices[i] >= basePrice, "Zone price below base");
+            
             _eventZones[newEventId][i] = Zone({
                 capacity: zoneCapacities[i],
                 price: zonePrices[i],
@@ -67,11 +72,13 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
             });
         }
 
+        _zoneCount[newEventId] = zoneCapacities.length;
         emit EventCreated(newEventId, name, date, msg.sender);
         return newEventId;
     }
 
     function cancelEvent(uint256 eventId) external override whenNotPaused {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
         Event storage event_ = _events[eventId];
         require(event_.organizer == msg.sender || msg.sender == owner(), "Unauthorized");
         require(!event_.cancelled, "Already cancelled");
@@ -80,8 +87,9 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
         event_.cancelled = true;
         emit EventCancelled(eventId);
         
-        // Notify RefundEscrow
-        refundEscrow.cancelEvent(eventId);
+        if (address(refundEscrow) != address(0)) {
+            refundEscrow.cancelEvent(eventId);
+        }
     }
 
     function purchaseTicket(uint256 eventId, uint256 zoneId) 
@@ -91,38 +99,46 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
         nonReentrant 
         whenNotPaused 
     {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
         Event storage event_ = _events[eventId];
         require(!event_.cancelled, "Event cancelled");
         require(block.timestamp < event_.date, "Event passed");
         require(!_hasTicket[eventId][msg.sender], "Already has ticket");
+        require(zoneId < event_.zoneCount, "Invalid zone ID");
         
         Zone storage zone = _eventZones[eventId][zoneId];
         require(zone.availableSeats > 0, "Zone sold out");
         require(msg.value >= zone.price, "Insufficient payment");
         
-        uint256 ticketId = ++_ticketIds;
+        _ticketIds++;
+        uint256 newTicketId = _ticketIds;
+        
         zone.availableSeats--;
         _hasTicket[eventId][msg.sender] = true;
         
-        uint256 platformFee = (msg.value * PLATFORM_FEE_PERCENTAGE) / 100;
-        uint256 organizerPayment = msg.value - platformFee;
+        uint256 platformFee = (zone.price * PLATFORM_FEE_PERCENTAGE) / 100;
+        uint256 organizerPayment = zone.price - platformFee;
         
         _eventRevenue[eventId] += organizerPayment;
 
-        // Refund excess payment
+        (bool feeSuccess, ) = payable(owner()).call{value: platformFee}("");
+        require(feeSuccess, "Fee transfer failed");
+
         if (msg.value > zone.price) {
             uint256 excess = msg.value - zone.price;
             (bool refundSuccess, ) = payable(msg.sender).call{value: excess}("");
             require(refundSuccess, "Refund failed");
         }
 
-        // Deposit payment to escrow
-        refundEscrow.depositPayment{value: zone.price}(eventId, ticketId);
+        if (address(refundEscrow) != address(0)) {
+            refundEscrow.depositPayment{value: organizerPayment}(eventId, newTicketId);
+        }
         
-        emit TicketPurchased(eventId, ticketId, msg.sender);
+        emit TicketPurchased(eventId, newTicketId, msg.sender);
     }
 
     function withdrawEventRevenue(uint256 eventId) external nonReentrant {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
         Event storage event_ = _events[eventId];
         require(event_.organizer == msg.sender, "Not organizer");
         require(block.timestamp > event_.date, "Event not ended");
@@ -138,27 +154,59 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
         emit RevenueWithdrawn(eventId, msg.sender, amount);
     }
 
-    function getEvent(uint256 eventId) external view override returns (Event memory) {
-        return _events[eventId];
+    function getEvent(uint256 eventId) external view override returns (EventView memory) {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
+        Event storage event_ = _events[eventId];
+        return EventView({
+            name: event_.name,
+            date: event_.date,
+            basePrice: event_.basePrice,
+            organizer: event_.organizer,
+            cancelled: event_.cancelled,
+            zoneCount: event_.zoneCount
+        });
     }
 
     function getZone(uint256 eventId, uint256 zoneId) external view override returns (Zone memory) {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
+        require(zoneId < _events[eventId].zoneCount, "Invalid zone ID");
         return _eventZones[eventId][zoneId];
     }
 
+    function getZonePrice(uint256 eventId, uint256 zoneId) external view override returns (uint256) {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
+        require(zoneId < _events[eventId].zoneCount, "Invalid zone ID");
+        return _eventZones[eventId][zoneId].price;
+    }
+
+    function getZoneCapacity(uint256 eventId, uint256 zoneId) external view override returns (uint256) {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
+        require(zoneId < _events[eventId].zoneCount, "Invalid zone ID");
+        return _eventZones[eventId][zoneId].capacity;
+    }
+
+    function getZoneCount(uint256 eventId) external view override returns (uint256) {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
+        return _events[eventId].zoneCount;
+    }
+
     function hasEventConcluded(uint256 eventId) external view override returns (bool) {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
         return block.timestamp > _events[eventId].date;
     }
 
     function getOrganizer(uint256 eventId) external view override returns (address) {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
         return _events[eventId].organizer;
     }
 
     function getEventRevenue(uint256 eventId) external view returns (uint256) {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
         return _eventRevenue[eventId];
     }
 
     function hasTicket(uint256 eventId, address user) external view returns (bool) {
+        require(eventId <= _eventIds && eventId > 0, "Invalid event ID");
         return _hasTicket[eventId][user];
     }
 

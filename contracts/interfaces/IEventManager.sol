@@ -8,8 +8,16 @@ interface IEventManager {
         uint256 basePrice;
         address organizer;
         bool cancelled;
-        uint256[] zoneCapacities;
-        uint256[] zonePrices;
+        uint256 zoneCount;  // Instead of dynamic arrays
+    }
+
+    struct EventView {
+        string name;
+        uint256 date;
+        uint256 basePrice;
+        address organizer;
+        bool cancelled;
+        uint256 zoneCount;
     }
 
     struct Zone {
@@ -69,9 +77,9 @@ interface IEventManager {
     /**
      * @notice Retrieves details of a specific event.
      * @param eventId ID of the event.
-     * @return The details of the event as an `Event` struct.
+     * @return The basic details of the event as an `EventView` struct.
      */
-    function getEvent(uint256 eventId) external view returns (Event memory);
+    function getEvent(uint256 eventId) external view returns (EventView memory);
 
     /**
      * @notice Retrieves details of a specific zone in an event.
@@ -80,6 +88,29 @@ interface IEventManager {
      * @return The details of the zone as a `Zone` struct.
      */
     function getZone(uint256 eventId, uint256 zoneId) external view returns (Zone memory);
+
+    /**
+     * @notice Retrieves price for a specific zone.
+     * @param eventId ID of the event.
+     * @param zoneId ID of the zone.
+     * @return The price of the zone.
+     */
+    function getZonePrice(uint256 eventId, uint256 zoneId) external view returns (uint256);
+
+    /**
+     * @notice Retrieves capacity for a specific zone.
+     * @param eventId ID of the event.
+     * @param zoneId ID of the zone.
+     * @return The capacity of the zone.
+     */
+    function getZoneCapacity(uint256 eventId, uint256 zoneId) external view returns (uint256);
+
+    /**
+     * @notice Gets the number of zones for an event.
+     * @param eventId ID of the event.
+     * @return The number of zones.
+     */
+    function getZoneCount(uint256 eventId) external view returns (uint256);
 
     /**
      * @notice Checks if an event has concluded.

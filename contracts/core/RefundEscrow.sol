@@ -11,9 +11,11 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
     event TicketCancelled(uint256 indexed eventId, uint256 indexed ticketId, uint256 refundAmount);
     event EventCancelled(uint256 indexed eventId);
     event EventCancellationRefunded(uint256 indexed eventId, uint256 indexed ticketId, uint256 refundAmount);
+    
     address private immutable _eventManager;
     mapping(uint256 => mapping(uint256 => Payment)) private payments;
     mapping(uint256 => bool) private eventCancelled;
+    mapping(uint256 => mapping(uint256 => address)) private originalPayers;
     
     struct Payment {
         address payer;
@@ -48,8 +50,12 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         require(payments[eventId][ticketId].payer == address(0), "Payment exists");
         require(!eventCancelled[eventId], "Event cancelled");
 
+        // Store the original transaction sender
+        address originalPayer = tx.origin;
+        originalPayers[eventId][ticketId] = originalPayer;
+
         payments[eventId][ticketId] = Payment({
-            payer: msg.sender,
+            payer: originalPayer,
             amount: msg.value,
             status: PaymentStatus.Pending,
             waitlistRefundEnabled: false,
@@ -57,7 +63,7 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
             isCancelled: false
         });
 
-        emit PaymentDeposited(eventId, msg.sender, msg.value);
+        emit PaymentDeposited(eventId, originalPayer, msg.value);
     }
 
     function cancelTicket(uint256 eventId, uint256 ticketId) 
@@ -66,7 +72,7 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         whenNotPaused 
     {
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.payer == msg.sender, "Not ticket owner");
+        require(payment.payer == originalPayers[eventId][ticketId], "Not ticket owner");
         require(!payment.isCancelled, "Already cancelled");
         require(block.timestamp <= payment.refundDeadline, "Refund window closed");
 
@@ -101,7 +107,7 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
     {
         require(eventCancelled[eventId], "Event not cancelled");
         Payment storage payment = payments[eventId][ticketId];
-        require(payment.payer == msg.sender, "Not ticket owner");
+        require(payment.payer == originalPayers[eventId][ticketId], "Not ticket owner");
         require(!payment.isCancelled, "Already refunded");
 
         payment.isCancelled = true;
@@ -137,7 +143,7 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
     {
         Payment storage payment = payments[eventId][ticketId];
         require(payment.status == PaymentStatus.Pending, "Invalid payment status");
-        require(payment.payer == msg.sender, "Not the payer");
+        require(msg.sender == originalPayers[eventId][ticketId], "Not the payer");
         require(block.timestamp <= payment.refundDeadline, "Refund window closed");
         
         uint256 refundAmount = payment.amount;
@@ -156,7 +162,7 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
     {
         Payment storage payment = payments[eventId][ticketId];
         require(payment.status == PaymentStatus.Pending, "Invalid payment status");
-        require(payment.payer == msg.sender, "Not the payer");
+        require(msg.sender == originalPayers[eventId][ticketId], "Not the payer");
         require(!payment.isCancelled, "Ticket cancelled");
         
         payment.waitlistRefundEnabled = true;
@@ -206,6 +212,14 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         returns (uint256) 
     {
         return payments[eventId][ticketId].amount;
+    }
+
+    function getOriginalPayer(uint256 eventId, uint256 ticketId) 
+        external 
+        view 
+        returns (address) 
+    {
+        return originalPayers[eventId][ticketId];
     }
 
     function pause() external onlyOwner {

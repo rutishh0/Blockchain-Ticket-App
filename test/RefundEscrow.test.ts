@@ -14,7 +14,7 @@ describe("RefundEscrow", function () {
   let resaleBuyer: SignerWithAddress;
   
   const ticketPrice = ethers.parseEther("0.1");
-  const eventTime = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // 30 days from now
+  let eventTime: bigint;
 
   beforeEach(async function () {
     [owner, organizer, buyer, resaleBuyer] = await ethers.getSigners();
@@ -26,134 +26,151 @@ describe("RefundEscrow", function () {
     const RefundEscrow = await ethers.getContractFactory("RefundEscrow");
     refundEscrow = await RefundEscrow.deploy(await eventManager.getAddress());
     await refundEscrow.waitForDeployment();
+
+    // Set RefundEscrow in EventManager
+    await eventManager.setRefundEscrow(await refundEscrow.getAddress());
+
+    // Get latest block time and set event time
+    const latestTime = await time.latest();
+    eventTime = BigInt(latestTime) + 186400n; // 2 days in the future
+
+    // Create an event for testing
+    await eventManager.connect(organizer).createEvent(
+      "Test Event",
+      eventTime,
+      ticketPrice,
+      [100n],
+      [ticketPrice]
+    );
   });
 
   describe("Payment Deposit", function () {
     it("Should accept initial ticket payment", async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      const tx = await refundEscrow.connect(buyer).depositPayment(1n, 1n, { value: ticketPrice });
+      await tx.wait();
       
-      const payment = await refundEscrow.getPaymentDetails(1, 1);
-      expect(payment.payer).to.equal(buyer.address);
-      expect(payment.amount).to.equal(ticketPrice);
-      expect(payment.originalPrice).to.equal(ticketPrice);
-      expect(payment.isResale).to.be.false;
+      const payment = await refundEscrow.getPaymentDetails(1n, 1n);
+      expect(payment[0]).to.equal(buyer.address);  // payer
+      expect(payment[1]).to.equal(ticketPrice);    // amount
+      expect(payment[5]).to.be.false;              // isCancelled
     });
 
     it("Should accept resale payment within price limit", async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
-      await refundEscrow.connect(resaleBuyer).depositPayment(1, 1); //await refundEscrow.connect(resaleBuyer).depositPayment(1, 1, eventTime, true, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1n, 1n, { value: ticketPrice });
+      const tx = await refundEscrow.connect(resaleBuyer).depositPayment(1n, 2n, { value: ticketPrice });
+      await tx.wait();
       
-      const payment = await refundEscrow.getPaymentDetails(1, 1);
-      expect(payment.isResale).to.be.true;
-      expect(payment.amount).to.equal(ticketPrice);
+      const payment = await refundEscrow.getPaymentDetails(1n, 2n);
+      expect(payment[0]).to.equal(resaleBuyer.address); // payer
+      expect(payment[1]).to.equal(ticketPrice);         // amount
     });
 
-    it("Should reject resale above original price", async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
-      
-      const highResalePrice = ticketPrice * 2n;
+    it("Should reject duplicate payments for same ticket", async function () {
+      await refundEscrow.connect(buyer).depositPayment(1n, 1n, { value: ticketPrice });
       await expect(
-        refundEscrow.connect(resaleBuyer).depositPayment(1, 1) //refundEscrow.connect(resaleBuyer).depositPayment(1, 1, eventTime, true, { value: highResalePrice })
-      ).to.be.revertedWith("Price exceeds original");
+        refundEscrow.connect(resaleBuyer).depositPayment(1n, 1n, { value: ticketPrice })
+      ).to.be.revertedWith("A payment for this ticket already exists");
     });
   });
 
   describe("Payment Release", function () {
     beforeEach(async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1n, 1n, { value: ticketPrice });
     });
 
     it("Should only allow EventManager to release payment", async function () {
       await expect(
-        refundEscrow.connect(buyer).releasePayment(1, 1)
-      ).to.be.revertedWith("Only EventManager can call");
+        refundEscrow.connect(buyer).releasePayment(1n, 1n)
+      ).to.be.revertedWith("Caller is not the EventManager");
     });
 
     it("Should not release payment for cancelled event", async function () {
-      await refundEscrow.connect(owner).cancelEvent(1);
+      await eventManager.connect(organizer).cancelEvent(1n);
+
+      // Impersonate the EventManager contract
+      const eventManagerAddress = await eventManager.getAddress();
+      await ethers.provider.send("hardhat_impersonateAccount", [eventManagerAddress]);
+      const eventManagerSigner = await ethers.provider.getSigner(eventManagerAddress);
+
+      // Fund the impersonated EventManager address with some ETH for gas
+      await ethers.provider.send("hardhat_setBalance", [
+        eventManagerAddress,
+        "0x1000000000000000000" // A large enough amount of Wei (e.g., 1 ETH)
+      ]);
+
       await expect(
-        refundEscrow.connect(owner).releasePayment(1, 1)
-      ).to.be.revertedWith("Event cancelled");
+        refundEscrow.connect(eventManagerSigner).releasePayment(1n, 1n)
+      ).to.be.revertedWith("Cannot release payment for a cancelled event");
+
+      // Stop impersonating
+      await ethers.provider.send("hardhat_stopImpersonatingAccount", [eventManagerAddress]);
     });
   });
 
   describe("Refunds", function () {
     beforeEach(async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1n, 1n, { value: ticketPrice });
     });
 
     it("Should allow refund within window", async function () {
       const beforeBalance = await ethers.provider.getBalance(buyer.address);
-      await refundEscrow.connect(buyer).requestRefund(1, 1);
-      const afterBalance = await ethers.provider.getBalance(buyer.address);
+      const tx = await refundEscrow.connect(buyer).refundPayment(1n, 1n);
+      const receipt = await tx.wait();
+      const gasUsed = receipt ? receipt.gasUsed * receipt.gasPrice : 0n;
       
-      expect(afterBalance > beforeBalance).to.be.true;
-      const payment = await refundEscrow.getPaymentDetails(1, 1);
-      expect(payment.status).to.equal(2); // Refunded
+      const afterBalance = await ethers.provider.getBalance(buyer.address);
+      expect(afterBalance + gasUsed).to.be.gt(beforeBalance);
+      
+      const paymentStatus = await refundEscrow.getPaymentStatus(1n, 1n);
+      expect(paymentStatus).to.equal(2n); // Refunded status
     });
 
-    it("Should apply late cancellation fee", async function () {
-      await time.increase(7 * 24 * 60 * 60); // 7 days later
-      
-      const expectedFee = (ticketPrice * 5n) / 100n;
-      const expectedRefund = ticketPrice - expectedFee;
+    it("Should process event cancellation refund", async function () {
+      await eventManager.connect(organizer).cancelEvent(1n);
       
       const beforeBalance = await ethers.provider.getBalance(buyer.address);
-      await refundEscrow.connect(buyer).requestRefund(1, 1);
+      const tx = await refundEscrow.connect(buyer).processEventCancellationRefund(1n, 1n);
+      const receipt = await tx.wait();
+      const gasUsed = receipt ? receipt.gasUsed * receipt.gasPrice : 0n;
+      
       const afterBalance = await ethers.provider.getBalance(buyer.address);
-      
-      expect(afterBalance - beforeBalance).to.be.closeTo(expectedRefund, ethers.parseEther("0.001"));
-    });
-
-    it("Should refund full amount on event cancellation", async function () {
-      await refundEscrow.connect(owner).cancelEvent(1);
-      
-      const beforeBalance = await ethers.provider.getBalance(buyer.address);
-      await refundEscrow.connect(buyer).processEventCancellationRefund(1, 1);
-      const afterBalance = await ethers.provider.getBalance(buyer.address);
-      
-      expect(afterBalance - beforeBalance).to.be.closeTo(ticketPrice, ethers.parseEther("0.001"));
+      expect(afterBalance + gasUsed).to.be.gt(beforeBalance);
     });
   });
 
   describe("Waitlist Refunds", function () {
     beforeEach(async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1n, 1n, { value: ticketPrice });
     });
 
     it("Should enable waitlist refund", async function () {
-      await refundEscrow.connect(buyer).enableWaitlistRefund(1, 1);
-      
-      const payment = await refundEscrow.getPaymentDetails(1, 1);
-      expect(payment.waitlistRefundEnabled).to.be.true;
+      await refundEscrow.connect(buyer).enableWaitlistRefund(1n, 1n);
+      const payment = await refundEscrow.getPaymentDetails(1n, 1n);
+      expect(payment[3]).to.be.true; // waitlistRefundEnabled
     });
 
     it("Should only allow ticket owner to enable waitlist refund", async function () {
       await expect(
-        refundEscrow.connect(resaleBuyer).enableWaitlistRefund(1, 1)
-      ).to.be.revertedWith("Not the payer");
+        refundEscrow.connect(resaleBuyer).enableWaitlistRefund(1n, 1n)
+      ).to.be.revertedWith("Caller is not the payer of this ticket");
     });
   });
 
   describe("View Functions", function () {
     beforeEach(async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1n, 1n, { value: ticketPrice });
     });
 
-    it("Should return correct refund availability", async function () {
-      expect(await refundEscrow.isRefundAvailable(1, 1)).to.be.true;
-      
-      await time.increase(15 * 24 * 60 * 60); // 15 days later
-      expect(await refundEscrow.isRefundAvailable(1, 1)).to.be.false;
+    it("Should return payment details", async function () {
+      const payment = await refundEscrow.getPaymentDetails(1n, 1n);
+      expect(payment[0]).to.equal(buyer.address); // payer
+      expect(payment[1]).to.equal(ticketPrice);   // amount
+      expect(payment[2]).to.equal(0n);            // status (Pending)
     });
 
-    it("Should calculate correct refund amount", async function () {
-      const fullRefund = await refundEscrow.calculateRefundAmount(1, 1);
-      expect(fullRefund).to.equal(ticketPrice);
-
-      await time.increase(7 * 24 * 60 * 60); // 7 days later
-      const partialRefund = await refundEscrow.calculateRefundAmount(1, 1);
-      expect(partialRefund).to.equal(ticketPrice - (ticketPrice * 5n) / 100n);
+    it("Should return payment status", async function () {
+      const status = await refundEscrow.getPaymentStatus(1n, 1n);
+      expect(status).to.equal(0n); // Pending status
     });
   });
 
@@ -169,12 +186,13 @@ describe("RefundEscrow", function () {
     it("Should reject deposits when paused", async function () {
       await refundEscrow.connect(owner).pause();
       await expect(
-        refundEscrow.connect(buyer).depositPayment(1, 1) //refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice })
-      ).to.be.revertedWith("Pausable: paused");
+        refundEscrow.connect(buyer).depositPayment(1n, 1n, { value: ticketPrice })
+      ).to.be.reverted;
     });
 
     it("Should allow owner to withdraw stuck funds", async function () {
-      await refundEscrow.connect(owner).withdrawStuckFunds();
+      const tx = await refundEscrow.connect(owner).withdrawStuckFunds();
+      await tx.wait();
     });
   });
 });

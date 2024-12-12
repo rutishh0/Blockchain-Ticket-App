@@ -83,23 +83,31 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         require(event_.isActive, "Tickets cannot be issued for an inactive event");
         require(event_.currentSupply < event_.maxSupply, "Cannot issue tickets as the event is sold out");
 
+        // Check waitlist priority
+        address nextInWaitlist = waitlistManager.getNextWaitingUser(eventId, 0);
+        require(
+            nextInWaitlist == address(0) || nextInWaitlist == to,
+            "Must issue to waitlist"
+        );
+
         _tokenIds++;
         uint256 newTokenId = _tokenIds;
 
         _mint(to, newTokenId);
+        bool isWaitlisted = waitlistManager.isUserWaiting(eventId, 0, to);
         tickets[newTokenId] = Ticket({
             eventId: eventId,
             price: event_.price,
             used: false,
             seatNumber: seatNumber,
-            isWaitlisted: waitlistManager.isUserWaiting(eventId, 0, to),
+            isWaitlisted: isWaitlisted,
             isResale: false,
             resalePrice: 0
         });
 
         event_.currentSupply++;
 
-        if (waitlistManager.isUserWaiting(eventId, 0, to)) {
+        if (isWaitlisted) {
             emit WaitlistTicketIssued(newTokenId, eventId, to);
         }
 
@@ -118,6 +126,10 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         require(event_.currentSupply < event_.maxSupply, "Tickets for this event are sold out");
         require(msg.value >= event_.price, "Payment must be at least the ticket price");
 
+        // Check if there are users in waitlist
+        address nextInWaitlist = waitlistManager.getNextWaitingUser(eventId, 0);
+        require(nextInWaitlist == address(0) || nextInWaitlist == msg.sender, "Must respect waitlist priority");
+
         uint256 platformFee = (event_.price * PLATFORM_FEE_PERCENTAGE) / 100;
         uint256 refundAmount = msg.value - event_.price;
 
@@ -133,22 +145,29 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         uint256 newTokenId = _tokenIds;
 
         _mint(msg.sender, newTokenId);
+        bool isWaitlisted = waitlistManager.isUserWaiting(eventId, 0, msg.sender);
         tickets[newTokenId] = Ticket({
             eventId: eventId,
             price: event_.price,
             used: false,
             seatNumber: seatNumber,
-            isWaitlisted: false,
+            isWaitlisted: isWaitlisted,
             isResale: false,
             resalePrice: 0
         });
 
         event_.currentSupply++;
+        
+        if (isWaitlisted) {
+            emit WaitlistTicketIssued(newTokenId, eventId, msg.sender);
+        }
+        
         emit TicketPurchased(newTokenId, msg.sender, event_.price);
         emit TicketMinted(newTokenId, eventId, event_.price);
         return newTokenId;
     }
 
+    // Rest of the functions remain unchanged...
     function listForResale(uint256 tokenId, uint256 resalePrice) external {
         require(ownerOf(tokenId) == msg.sender, "Not owner");
         require(!tickets[tokenId].used, "Ticket used");
@@ -166,8 +185,8 @@ contract TicketFactory is ERC721, Ownable, ReentrancyGuard {
         nonReentrant 
     {
         Ticket storage ticket = tickets[tokenId];
-        require(ticket.isResale, "Caller is not the owner of the ticket");
-        require(!ticket.used, "Cannot list a used ticket for resale");
+        require(ticket.isResale, "Ticket not listed for resale");
+        require(!ticket.used, "Cannot purchase a used ticket");
         require(msg.value >= ticket.resalePrice, "Payment must be at least the resale price");
 
         address seller = ownerOf(tokenId);

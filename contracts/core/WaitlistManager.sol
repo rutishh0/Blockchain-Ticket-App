@@ -167,7 +167,7 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
         uint256 activeCount = 0;
         
         for (uint256 i = 0; i < waitlist.entries.length; i++) {
-            if (waitlist.entries[i].isActive) {
+            if (waitlist.entries[i].isActive && !waitlist.entries[i].hasOffer) {
                 activeCount++;
             }
         }
@@ -214,6 +214,17 @@ contract WaitlistManager is Ownable, ReentrancyGuard, Pausable {
             waitlist.entries[index].isActive = false;
             waitlist.isWaiting[user] = false;
             emit LeftWaitlist(eventId, zoneId, user);
+        }
+    }
+
+    function clearWaitlistForUser(uint256 eventId, uint256 zoneId, address user) 
+        public 
+    {
+        ZoneWaitlist storage waitlist = waitlists[eventId][zoneId];
+        if (waitlist.isWaiting[user]) {
+            uint256 index = waitlist.userIndex[user];
+            waitlist.entries[index].isActive = false;
+            waitlist.isWaiting[user] = false;
         }
     }
 }

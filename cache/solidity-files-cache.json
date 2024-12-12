@@ -1,8 +1,8 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\core\\ConditionalFundsEscrow.sol": {
-      "lastModificationDate": 1734005758034,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\core\\ConditionalFundsEscrow.sol": {
+      "lastModificationDate": 1733955733889,
       "contentHash": "3256346f3e99d7f7a9b9e0b5a703f78f",
       "sourceName": "contracts/core/ConditionalFundsEscrow.sol",
       "solcConfig": {
@@ -44,8 +44,45 @@
         "ConditionalFundsEscrow"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\interfaces\\IConditionalFundsEscrow.sol": {
-      "lastModificationDate": 1734005758039,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\interfaces\\IEventManager.sol": {
+      "lastModificationDate": 1734023996129,
+      "contentHash": "466ef4f0c18321d41b1947bd21e00e1e",
+      "sourceName": "contracts/interfaces/IEventManager.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "IEventManager"
+      ]
+    },
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\interfaces\\IConditionalFundsEscrow.sol": {
+      "lastModificationDate": 1733771192354,
       "contentHash": "2cfbe85d40f7b3f135c366649ba1dc0d",
       "sourceName": "contracts/interfaces/IConditionalFundsEscrow.sol",
       "solcConfig": {
@@ -81,121 +118,8 @@
         "IConditionalFundsEscrow"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\interfaces\\IEventManager.sol": {
-      "lastModificationDate": 1734005758039,
-      "contentHash": "47008873b8666f662a920596c741cd75",
-      "sourceName": "contracts/interfaces/IEventManager.sol",
-      "solcConfig": {
-        "version": "0.8.20",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "viaIR": true,
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "IEventManager"
-      ]
-    },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\ReentrancyGuard.sol": {
-      "lastModificationDate": 1734005861528,
-      "contentHash": "190613e556d509d9e9a0ea43dc5d891d",
-      "sourceName": "@openzeppelin/contracts/utils/ReentrancyGuard.sol",
-      "solcConfig": {
-        "version": "0.8.20",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "viaIR": true,
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "ReentrancyGuard"
-      ]
-    },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\access\\Ownable.sol": {
-      "lastModificationDate": 1734005861496,
-      "contentHash": "d3c790edc9ccf808a17c5a6cd13614fd",
-      "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
-      "solcConfig": {
-        "version": "0.8.20",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "viaIR": true,
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../utils/Context.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "Ownable"
-      ]
-    },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\Pausable.sol": {
-      "lastModificationDate": 1734005861515,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\Pausable.sol": {
+      "lastModificationDate": 1733772759952,
       "contentHash": "24e52f6ef3868e6fca664a423140bee9",
       "sourceName": "@openzeppelin/contracts/utils/Pausable.sol",
       "solcConfig": {
@@ -233,8 +157,84 @@
         "Pausable"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\Context.sol": {
-      "lastModificationDate": 1734005860885,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\access\\Ownable.sol": {
+      "lastModificationDate": 1733772759952,
+      "contentHash": "d3c790edc9ccf808a17c5a6cd13614fd",
+      "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Ownable"
+      ]
+    },
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\ReentrancyGuard.sol": {
+      "lastModificationDate": 1733772759952,
+      "contentHash": "190613e556d509d9e9a0ea43dc5d891d",
+      "sourceName": "@openzeppelin/contracts/utils/ReentrancyGuard.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ReentrancyGuard"
+      ]
+    },
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\Context.sol": {
+      "lastModificationDate": 1733772759892,
       "contentHash": "67bfbc07588eb8683b3fd8f6f909563e",
       "sourceName": "@openzeppelin/contracts/utils/Context.sol",
       "solcConfig": {
@@ -270,8 +270,49 @@
         "Context"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\ERC721.sol": {
-      "lastModificationDate": 1734005861147,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\core\\WaitlistManager.sol": {
+      "lastModificationDate": 1734021327254,
+      "contentHash": "68c464f880f45479fa601e8e68a297ad",
+      "sourceName": "contracts/core/WaitlistManager.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/access/Ownable.sol",
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol",
+        "@openzeppelin/contracts/utils/Pausable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "WaitlistManager"
+      ]
+    },
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\ERC721.sol": {
+      "lastModificationDate": 1733772759912,
       "contentHash": "a7951c81f7037d558c6d2f220b0cb38e",
       "sourceName": "@openzeppelin/contracts/token/ERC721/ERC721.sol",
       "solcConfig": {
@@ -315,47 +356,8 @@
         "ERC721"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\interfaces\\draft-IERC6093.sol": {
-      "lastModificationDate": 1734005860942,
-      "contentHash": "267d92fe4de67b1bdb3302c08f387dbf",
-      "sourceName": "@openzeppelin/contracts/interfaces/draft-IERC6093.sol",
-      "solcConfig": {
-        "version": "0.8.20",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "viaIR": true,
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "IERC1155Errors",
-        "IERC20Errors",
-        "IERC721Errors"
-      ]
-    },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\introspection\\ERC165.sol": {
-      "lastModificationDate": 1734005861052,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\introspection\\ERC165.sol": {
+      "lastModificationDate": 1733772759902,
       "contentHash": "7c03c1e37c3dc24eafb76dc2b8a5c3a6",
       "sourceName": "@openzeppelin/contracts/utils/introspection/ERC165.sol",
       "solcConfig": {
@@ -393,8 +395,8 @@
         "ERC165"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\Strings.sol": {
-      "lastModificationDate": 1734005861572,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\Strings.sol": {
+      "lastModificationDate": 1733772759962,
       "contentHash": "f4cc092958a3ddec1f4ed4103bfc54dd",
       "sourceName": "@openzeppelin/contracts/utils/Strings.sol",
       "solcConfig": {
@@ -433,47 +435,8 @@
         "Strings"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\extensions\\IERC721Metadata.sol": {
-      "lastModificationDate": 1734005861414,
-      "contentHash": "12c206f185cb951213799561fdcaa40d",
-      "sourceName": "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol",
-      "solcConfig": {
-        "version": "0.8.20",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "viaIR": true,
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../IERC721.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "IERC721Metadata"
-      ]
-    },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\IERC721.sol": {
-      "lastModificationDate": 1734005861403,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\IERC721.sol": {
+      "lastModificationDate": 1733772759942,
       "contentHash": "1fdc621cd6747e8985e11fc76ce74511",
       "sourceName": "@openzeppelin/contracts/token/ERC721/IERC721.sol",
       "solcConfig": {
@@ -511,8 +474,47 @@
         "IERC721"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\utils\\ERC721Utils.sol": {
-      "lastModificationDate": 1734005861183,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\interfaces\\draft-IERC6093.sol": {
+      "lastModificationDate": 1733772759892,
+      "contentHash": "267d92fe4de67b1bdb3302c08f387dbf",
+      "sourceName": "@openzeppelin/contracts/interfaces/draft-IERC6093.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "IERC1155Errors",
+        "IERC20Errors",
+        "IERC721Errors"
+      ]
+    },
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\utils\\ERC721Utils.sol": {
+      "lastModificationDate": 1733772759912,
       "contentHash": "f4b67273e290784d0e155f004ae52f0b",
       "sourceName": "@openzeppelin/contracts/token/ERC721/utils/ERC721Utils.sol",
       "solcConfig": {
@@ -551,8 +553,47 @@
         "ERC721Utils"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\introspection\\IERC165.sol": {
-      "lastModificationDate": 1734005861338,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\extensions\\IERC721Metadata.sol": {
+      "lastModificationDate": 1733772759942,
+      "contentHash": "12c206f185cb951213799561fdcaa40d",
+      "sourceName": "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC721.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "IERC721Metadata"
+      ]
+    },
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\introspection\\IERC165.sol": {
+      "lastModificationDate": 1733772759932,
       "contentHash": "bf0119eb2a570f219729ff38b6cd1df8",
       "sourceName": "@openzeppelin/contracts/utils/introspection/IERC165.sol",
       "solcConfig": {
@@ -588,8 +629,8 @@
         "IERC165"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\math\\Math.sol": {
-      "lastModificationDate": 1734005861466,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\math\\Math.sol": {
+      "lastModificationDate": 1733772759950,
       "contentHash": "2b2665ae9bdb1af440658741a77fe213",
       "sourceName": "@openzeppelin/contracts/utils/math/Math.sol",
       "solcConfig": {
@@ -628,8 +669,8 @@
         "Math"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\math\\SignedMath.sol": {
-      "lastModificationDate": 1734005861562,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\math\\SignedMath.sol": {
+      "lastModificationDate": 1733772759960,
       "contentHash": "ae3528afb8bdb0a7dcfba5b115ee8074",
       "sourceName": "@openzeppelin/contracts/utils/math/SignedMath.sol",
       "solcConfig": {
@@ -667,8 +708,8 @@
         "SignedMath"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\Panic.sol": {
-      "lastModificationDate": 1734005861512,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\Panic.sol": {
+      "lastModificationDate": 1733772759952,
       "contentHash": "2133dc13536b4a6a98131e431fac59e1",
       "sourceName": "@openzeppelin/contracts/utils/Panic.sol",
       "solcConfig": {
@@ -704,8 +745,8 @@
         "Panic"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\utils\\math\\SafeCast.sol": {
-      "lastModificationDate": 1734005861547,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\utils\\math\\SafeCast.sol": {
+      "lastModificationDate": 1733772759952,
       "contentHash": "2adca1150f58fc6f3d1f0a0f22ee7cca",
       "sourceName": "@openzeppelin/contracts/utils/math/SafeCast.sol",
       "solcConfig": {
@@ -741,8 +782,8 @@
         "SafeCast"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\IERC721Receiver.sol": {
-      "lastModificationDate": 1734005861420,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\node_modules\\@openzeppelin\\contracts\\token\\ERC721\\IERC721Receiver.sol": {
+      "lastModificationDate": 1733772759942,
       "contentHash": "729ce0904eb533489ffcc3bfe91237d4",
       "sourceName": "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol",
       "solcConfig": {
@@ -778,9 +819,9 @@
         "IERC721Receiver"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\core\\TicketFactory.sol": {
-      "lastModificationDate": 1734005758037,
-      "contentHash": "ec11aa00e148160fe865e3138e861333",
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\core\\TicketFactory.sol": {
+      "lastModificationDate": 1734020406138,
+      "contentHash": "f7c4e29a20f05271ccc17f8a4219ff92",
       "sourceName": "contracts/core/TicketFactory.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -820,49 +861,8 @@
         "TicketFactory"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\core\\WaitlistManager.sol": {
-      "lastModificationDate": 1734005758037,
-      "contentHash": "fa3bbe1621e2c206d294324859dafd94",
-      "sourceName": "contracts/core/WaitlistManager.sol",
-      "solcConfig": {
-        "version": "0.8.20",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "viaIR": true,
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@openzeppelin/contracts/access/Ownable.sol",
-        "@openzeppelin/contracts/utils/ReentrancyGuard.sol",
-        "@openzeppelin/contracts/utils/Pausable.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "WaitlistManager"
-      ]
-    },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\core\\ResaleManager.sol": {
-      "lastModificationDate": 1734005758036,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\core\\ResaleManager.sol": {
+      "lastModificationDate": 1733955733889,
       "contentHash": "c40ca621d20a44a40173c77726ace93a",
       "sourceName": "contracts/core/ResaleManager.sol",
       "solcConfig": {
@@ -903,8 +903,8 @@
         "ResaleManager"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\interfaces\\ITicketFactory.sol": {
-      "lastModificationDate": 1734005758040,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\interfaces\\ITicketFactory.sol": {
+      "lastModificationDate": 1733771192354,
       "contentHash": "b4ba8d4f95b18fa0c34d09b8f28e824e",
       "sourceName": "contracts/interfaces/ITicketFactory.sol",
       "solcConfig": {
@@ -940,8 +940,8 @@
         "ITicketFactory"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\core\\RefundEscrow.sol": {
-      "lastModificationDate": 1734013840532,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\core\\RefundEscrow.sol": {
+      "lastModificationDate": 1734018359570,
       "contentHash": "1befa6f20e36ad367aee2ee77e389e85",
       "sourceName": "contracts/core/RefundEscrow.sol",
       "solcConfig": {
@@ -983,8 +983,8 @@
         "RefundEscrow"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\interfaces\\IRefundEscrow.sol": {
-      "lastModificationDate": 1734005758039,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\interfaces\\IRefundEscrow.sol": {
+      "lastModificationDate": 1733771192354,
       "contentHash": "5fc6a94b9f55d3b395581648f9a48d7c",
       "sourceName": "contracts/interfaces/IRefundEscrow.sol",
       "solcConfig": {
@@ -1020,9 +1020,9 @@
         "IRefundEscrow"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\core\\EventManager.sol": {
-      "lastModificationDate": 1734012253039,
-      "contentHash": "cdabcd2024e1c41ccba0356673f887d3",
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\core\\EventManager.sol": {
+      "lastModificationDate": 1734024903537,
+      "contentHash": "5c174f5fd24b61cce9819a8ddbb9609a",
       "sourceName": "contracts/core/EventManager.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -1063,8 +1063,8 @@
         "EventManager"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\interfaces\\IWaitlistManager.sol": {
-      "lastModificationDate": 1734005758041,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\interfaces\\IWaitlistManager.sol": {
+      "lastModificationDate": 1733771192354,
       "contentHash": "c7c91ca6bdcdf761e8e38e99a104c883",
       "sourceName": "contracts/interfaces/IWaitlistManager.sol",
       "solcConfig": {
@@ -1100,8 +1100,8 @@
         "IWaitlistManager"
       ]
     },
-    "C:\\Users\\GH\\Desktop\\Masters\\BlockChain\\Blockchain-Ticket-App\\contracts\\Lock.sol": {
-      "lastModificationDate": 1734005758033,
+    "C:\\Users\\Rutishkrishna\\Desktop\\blockchain\\Project\\contracts\\Lock.sol": {
+      "lastModificationDate": 1733771192354,
       "contentHash": "b856d271fc399fcce4473dfa09eb29dd",
       "sourceName": "contracts/Lock.sol",
       "solcConfig": {

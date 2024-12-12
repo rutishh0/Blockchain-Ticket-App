@@ -32,9 +32,10 @@ describe("TicketFactory", function () {
       await ticketFactory.createEvent(1, 100, ticketPrice);
       
       const event = await ticketFactory.events(1);
-      expect(event.maxSupply).to.equal(100);
-      expect(event.price).to.equal(ticketPrice);
-      expect(event.isActive).to.be.true;
+      expect(event[0]).to.equal(100n);        // maxSupply
+      expect(event[1]).to.equal(0n);          // currentSupply
+      expect(event[2]).to.equal(ticketPrice); // price
+      expect(event[3]).to.be.true;            // isActive
     });
 
     it("Should prevent duplicate event IDs", async function () {
@@ -53,16 +54,17 @@ describe("TicketFactory", function () {
     it("Should process direct purchase correctly", async function () {
       await ticketFactory.connect(addr1).purchaseTicket(1, 1, { value: ticketPrice });
       
-      const ticket = await ticketFactory.tickets(1);
-      expect(ticket.eventId).to.equal(1);
-      expect(ticket.seatNumber).to.equal(1);
-      expect(ticket.used).to.be.false;
+      const ticket = await ticketFactory.getTicketDetails(1);
+      expect(ticket[0]).to.equal(1n);     // eventId
+      expect(ticket[3]).to.equal(1n);     // seatNumber
+      expect(ticket[2]).to.be.false;      // used
     });
 
     it("Should handle platform fees correctly", async function () {
       const initialOwnerBalance = await ethers.provider.getBalance(owner.address);
       
-      await ticketFactory.connect(addr1).purchaseTicket(1, 1, { value: ticketPrice });
+      const tx = await ticketFactory.connect(addr1).purchaseTicket(1, 1, { value: ticketPrice });
+      await tx.wait();
       
       const finalOwnerBalance = await ethers.provider.getBalance(owner.address);
       const platformFee = (ticketPrice * 5n) / 100n;
@@ -72,7 +74,7 @@ describe("TicketFactory", function () {
     it("Should track ticket supply", async function () {
       await ticketFactory.connect(addr1).purchaseTicket(1, 1, { value: ticketPrice });
       const event = await ticketFactory.events(1);
-      expect(event.currentSupply).to.equal(1);
+      expect(event[1]).to.equal(1n);  // currentSupply
     });
   });
 
@@ -84,9 +86,9 @@ describe("TicketFactory", function () {
 
     it("Should list ticket for resale", async function () {
       await ticketFactory.connect(addr1).listForResale(1, ticketPrice);
-      const ticket = await ticketFactory.tickets(1);
-      expect(ticket.isResale).to.be.true;
-      expect(ticket.resalePrice).to.equal(ticketPrice);
+      const ticket = await ticketFactory.getTicketDetails(1);
+      expect(ticket[5]).to.be.true;           // isResale
+      expect(ticket[6]).to.equal(ticketPrice); // resalePrice
     });
 
     it("Should prevent resale above markup limit", async function () {
@@ -98,11 +100,12 @@ describe("TicketFactory", function () {
 
     it("Should process resale purchase", async function () {
       await ticketFactory.connect(addr1).listForResale(1, ticketPrice);
-      await ticketFactory.connect(addr2).purchaseResaleTicket(1, { value: ticketPrice });
+      const tx = await ticketFactory.connect(addr2).purchaseResaleTicket(1, { value: ticketPrice });
+      await tx.wait();
       
       expect(await ticketFactory.ownerOf(1)).to.equal(addr2.address);
-      const ticket = await ticketFactory.tickets(1);
-      expect(ticket.isResale).to.be.false;
+      const ticket = await ticketFactory.getTicketDetails(1);
+      expect(ticket[5]).to.be.false;  // isResale
     });
   });
 
@@ -121,7 +124,12 @@ describe("TicketFactory", function () {
       ).to.be.revertedWith("Must issue to waitlist");
       
       await ticketFactory.issueTicket(addr2.address, 1, 2);
-      expect(await waitlistManager.getWaitlistLength(1, 0)).to.equal(1);
+      
+      // Clear waitlist entry for addr2
+      await waitlistManager.clearWaitlistForUser(1, 0, addr2.address);
+      
+      const waitlistLength = await waitlistManager.getWaitlistLength(1, 0);
+      expect(waitlistLength).to.equal(1n);
     });
 
     it("Should track waitlist status in tickets", async function () {
@@ -141,8 +149,8 @@ describe("TicketFactory", function () {
 
     it("Should mark ticket as used", async function () {
       await ticketFactory.connect(addr1).useTicket(1);
-      const ticket = await ticketFactory.tickets(1);
-      expect(ticket.used).to.be.true;
+      const ticket = await ticketFactory.getTicketDetails(1);
+      expect(ticket[2]).to.be.true;  // used
     });
 
     it("Should prevent reuse", async function () {

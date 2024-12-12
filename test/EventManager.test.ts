@@ -31,7 +31,7 @@ describe("EventManager", function () {
     const zonePrices = [ethers.parseEther("0.2"), ethers.parseEther("0.1")];
 
     it("Should create event with correct parameters", async function () {
-      const eventDate = await time.latest() + 86400;
+      const eventDate = await time.latest() + 186400;
       await eventManager.connect(organizer).createEvent(
         "Test Event",
         eventDate,
@@ -47,7 +47,7 @@ describe("EventManager", function () {
     });
 
     it("Should reject invalid dates", async function () {
-      const pastDate = await time.latest() - 86400;
+      const pastDate = await time.latest() - 186400;
       await expect(
         eventManager.connect(organizer).createEvent(
           "Test Event",
@@ -56,11 +56,11 @@ describe("EventManager", function () {
           zoneCapacities,
           zonePrices
         )
-      ).to.be.revertedWith("Invalid date");
+      ).to.be.revertedWith("Event date must be at least one day in the future");
     });
 
     it("Should validate zone prices", async function () {
-      const eventDate = await time.latest() + 86400;
+      const eventDate = await time.latest() + 186400;
       const lowZonePrices = [ethers.parseEther("0.05"), ethers.parseEther("0.05")];
       
       await expect(
@@ -71,13 +71,13 @@ describe("EventManager", function () {
           zoneCapacities,
           lowZonePrices
         )
-      ).to.be.revertedWith("Zone price below base");
+      ).to.be.revertedWith("Zone price must be greater than or equal to the base price");
     });
   });
 
   describe("Ticket Purchase", function () {
     beforeEach(async function () {
-      const eventDate = await time.latest() + 86400;
+      const eventDate = await time.latest() + 186400;
       await eventManager.connect(organizer).createEvent(
         "Test Event",
         eventDate,
@@ -115,7 +115,7 @@ describe("EventManager", function () {
         eventManager.connect(buyer).purchaseTicket(1, 0, {
           value: ethers.parseEther("0.1")
         })
-      ).to.be.revertedWith("Already has ticket");
+      ).to.be.revertedWith("Caller has already purchased a ticket for this event");
     });
 
     it("Should track zone capacity", async function () {
@@ -130,7 +130,7 @@ describe("EventManager", function () {
 
   describe("Event Cancellation", function () {
     beforeEach(async function () {
-      const eventDate = await time.latest() + 86400;
+      const eventDate = await time.latest() + 186400;
       await eventManager.connect(organizer).createEvent(
         "Test Event",
         eventDate,
@@ -152,19 +152,19 @@ describe("EventManager", function () {
         eventManager.connect(buyer).purchaseTicket(1, 0, {
           value: ethers.parseEther("0.1")
         })
-      ).to.be.revertedWith("Event cancelled");
+      ).to.be.revertedWith("Cannot purchase tickets for a cancelled event");
     });
 
     it("Should only allow organizer or owner to cancel", async function () {
       await expect(
         eventManager.connect(buyer).cancelEvent(1)
-      ).to.be.revertedWith("Unauthorized");
+      ).to.be.revertedWith("Caller is not the event organizer or owner");
     });
   });
 
   describe("Revenue Management", function () {
     beforeEach(async function () {
-      const eventDate = await time.latest() + 86400;
+      const eventDate = await time.latest() + 186400;
       await eventManager.connect(organizer).createEvent(
         "Test Event",
         eventDate,
@@ -188,7 +188,7 @@ describe("EventManager", function () {
         value: ethers.parseEther("0.1")
       });
 
-      await time.increase(86401); // One day + 1 second
+      await time.increase(186401); // One day + 1 second
 
       const initialBalance = await ethers.provider.getBalance(organizer.address);
       await eventManager.connect(organizer).withdrawEventRevenue(1);

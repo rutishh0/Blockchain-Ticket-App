@@ -41,7 +41,7 @@ describe("TicketFactory", function () {
       await ticketFactory.createEvent(1, 100, ticketPrice);
       await expect(
         ticketFactory.createEvent(1, 100, ticketPrice)
-      ).to.be.revertedWith("Event already exists");
+      ).to.be.revertedWith("An active event with this ID already exists");
     });
   });
 
@@ -149,13 +149,13 @@ describe("TicketFactory", function () {
       await ticketFactory.connect(addr1).useTicket(1);
       await expect(
         ticketFactory.connect(addr1).useTicket(1)
-      ).to.be.revertedWith("Ticket already used");
+      ).to.be.revertedWith("This ticket has already been used");
     });
 
     it("Should prevent non-owner usage", async function () {
       await expect(
         ticketFactory.connect(addr2).useTicket(1)
-      ).to.be.revertedWith("Not ticket owner");
+      ).to.be.revertedWith("Caller is not the owner of the ticket");
     });
   });
 });

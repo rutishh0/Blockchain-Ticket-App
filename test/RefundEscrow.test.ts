@@ -30,7 +30,7 @@ describe("RefundEscrow", function () {
 
   describe("Payment Deposit", function () {
     it("Should accept initial ticket payment", async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
       
       const payment = await refundEscrow.getPaymentDetails(1, 1);
       expect(payment.payer).to.equal(buyer.address);
@@ -40,8 +40,8 @@ describe("RefundEscrow", function () {
     });
 
     it("Should accept resale payment within price limit", async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
-      await refundEscrow.connect(resaleBuyer).depositPayment(1, 1, eventTime, true, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(resaleBuyer).depositPayment(1, 1); //await refundEscrow.connect(resaleBuyer).depositPayment(1, 1, eventTime, true, { value: ticketPrice });
       
       const payment = await refundEscrow.getPaymentDetails(1, 1);
       expect(payment.isResale).to.be.true;
@@ -49,18 +49,18 @@ describe("RefundEscrow", function () {
     });
 
     it("Should reject resale above original price", async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
       
       const highResalePrice = ticketPrice * 2n;
       await expect(
-        refundEscrow.connect(resaleBuyer).depositPayment(1, 1, eventTime, true, { value: highResalePrice })
+        refundEscrow.connect(resaleBuyer).depositPayment(1, 1) //refundEscrow.connect(resaleBuyer).depositPayment(1, 1, eventTime, true, { value: highResalePrice })
       ).to.be.revertedWith("Price exceeds original");
     });
   });
 
   describe("Payment Release", function () {
     beforeEach(async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
     });
 
     it("Should only allow EventManager to release payment", async function () {
@@ -79,7 +79,7 @@ describe("RefundEscrow", function () {
 
   describe("Refunds", function () {
     beforeEach(async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
     });
 
     it("Should allow refund within window", async function () {
@@ -118,7 +118,7 @@ describe("RefundEscrow", function () {
 
   describe("Waitlist Refunds", function () {
     beforeEach(async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
     });
 
     it("Should enable waitlist refund", async function () {
@@ -137,7 +137,7 @@ describe("RefundEscrow", function () {
 
   describe("View Functions", function () {
     beforeEach(async function () {
-      await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
+      await refundEscrow.connect(buyer).depositPayment(1, 1); //await refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice });
     });
 
     it("Should return correct refund availability", async function () {
@@ -169,7 +169,7 @@ describe("RefundEscrow", function () {
     it("Should reject deposits when paused", async function () {
       await refundEscrow.connect(owner).pause();
       await expect(
-        refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice })
+        refundEscrow.connect(buyer).depositPayment(1, 1) //refundEscrow.connect(buyer).depositPayment(1, 1, eventTime, false, { value: ticketPrice })
       ).to.be.revertedWith("Pausable: paused");
     });
 

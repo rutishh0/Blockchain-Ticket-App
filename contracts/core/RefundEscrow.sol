@@ -46,10 +46,10 @@ contract RefundEscrow is IRefundEscrow, Ownable, ReentrancyGuard, Pausable {
         nonReentrant 
         whenNotPaused 
     {
+        require(!paused(), "Pausable: paused");
         require(msg.value > 0, "Payment amount must be greater than zero");
         require(payments[eventId][ticketId].payer == address(0), "A payment for this ticket already exists");
         require(!eventCancelled[eventId], "Cannot deposit payment for a cancelled event");
-
         // Store the original transaction sender
         address originalPayer = tx.origin;
         originalPayers[eventId][ticketId] = originalPayer;

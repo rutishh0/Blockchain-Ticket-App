@@ -44,13 +44,13 @@ describe("EventManager", function () {
       );
       await tx.wait();
 
-      const evt = await eventManager.getEvent(1);
-      // evt is { name, date, basePrice, organizer, cancelled, zoneCount }
-      expect(evt.name).to.equal("Test Event");
-      expect(evt.date).to.equal(eventDate);
-      expect(evt.basePrice).to.equal(basePrice);
-      expect(evt.organizer).to.equal(organizer.address);
-      expect(evt.cancelled).to.be.false;
+      const eventData = await eventManager.getEventData(1);
+      expect(eventData[0]).to.equal("Test Event");       // name
+      expect(eventData[1]).to.equal(eventDate);          // date
+      expect(eventData[2]).to.equal(basePrice);          // basePrice
+      expect(eventData[3]).to.equal(organizer.address);  // organizer
+      expect(eventData[4]).to.be.false;                  // cancelled
+      expect(eventData[5]).to.equal(2n);                 // zoneCount
     });
 
     it("Should reject invalid dates", async function () {
@@ -155,8 +155,8 @@ describe("EventManager", function () {
       const tx = await eventManager.connect(organizer).cancelEvent(1);
       await tx.wait();
 
-      const evt = await eventManager.getEvent(1);
-      expect(evt.cancelled).to.be.true;
+      const eventData = await eventManager.getEventData(1);
+      expect(eventData[4]).to.be.true;  // cancelled status
     });
 
     it("Should prevent purchases after cancellation", async function () {

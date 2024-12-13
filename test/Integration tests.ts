@@ -4,19 +4,6 @@ import { EventManager, TicketFactory, WaitlistManager, RefundEscrow } from "../t
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-// Helper function: directly call with a number since eventId is always known to be small (1)
-async function getEventData(eventManager: EventManager, eventId: number) {
-  const eventData = await eventManager.getEvent(eventId);
-  return {
-    name: eventData.name,
-    date: eventData.date,
-    basePrice: eventData.basePrice,
-    organizer: eventData.organizer,
-    cancelled: eventData.cancelled,
-    zoneCount: eventData.zoneCount
-  };
-}
-
 describe("Ticketing System Integration", function () {
   let eventManager: EventManager;
   let ticketFactory: TicketFactory;
@@ -69,7 +56,10 @@ describe("Ticketing System Integration", function () {
       ZONE_PRICES
     );
     await tx.wait();
-    eventId = 1; // Use a plain number here
+    eventId = 1; // First event
+
+    // Initialize event in TicketFactory
+    await ticketFactory.connect(owner).createEvent(eventId, ZONE_CAPACITIES[0], ZONE_PRICES[0]);
   });
 
   describe("Full Ticket Lifecycle", function () {
@@ -80,26 +70,25 @@ describe("Ticketing System Integration", function () {
       });
       await purchaseTx.wait();
       
-      // Manually deposit payment into RefundEscrow
+      // Issue ticket in TicketFactory
       const ticketId = 1n;
+      await ticketFactory.connect(owner).issueTicket(buyer1.address, eventId, 1);
+      expect(await ticketFactory.ownerOf(ticketId)).to.equal(buyer1.address);
+      
+      // Deposit payment into RefundEscrow
       await refundEscrow.connect(buyer1).depositPayment(BigInt(eventId), ticketId, { value: ZONE_PRICES[0] });
       
       // Verify purchase
       expect(await eventManager.hasTicket(eventId, buyer1.address)).to.be.true;
       
       // Get event details
-      const eventData = await getEventData(eventManager, eventId);
-      expect(eventData.name).to.equal(EVENT_NAME);
-      expect(eventData.basePrice).to.equal(BASE_PRICE);
-      expect(eventData.organizer.toLowerCase()).to.equal(organizer.address.toLowerCase());
-      expect(eventData.cancelled).to.be.false;
-      
-      // Verify zone details
-      const zoneCount = await eventManager.getZoneCount(eventId);
-      expect(zoneCount).to.equal(BigInt(ZONE_CAPACITIES.length));
-      
-      const zonePrice = await eventManager.getZonePrice(eventId, 0);
-      expect(zonePrice).to.equal(ZONE_PRICES[0]);
+      const eventData = await eventManager.getEventData(eventId);
+      expect(eventData[0]).to.equal(EVENT_NAME);           // name
+      expect(eventData[1]).to.equal(eventDate);            // date
+      expect(eventData[2]).to.equal(BASE_PRICE);           // basePrice
+      expect(eventData[3]).to.equal(organizer.address);    // organizer
+      expect(eventData[4]).to.be.false;                    // cancelled
+      expect(eventData[5]).to.equal(BigInt(ZONE_CAPACITIES.length));  // zoneCount
       
       // 2. Waitlist Testing
       await waitlistManager.connect(buyer2).joinWaitlist(BigInt(eventId), 0n);
@@ -112,28 +101,25 @@ describe("Ticketing System Integration", function () {
       expect(buyer2Position).to.equal(1n);
       
       // 3. Resale Process
+      await ticketFactory.connect(buyer1).approve(await ticketFactory.getAddress(), ticketId);
       await ticketFactory.connect(buyer1).listForResale(ticketId, ZONE_PRICES[0]);
       
       const ticketDetails = await ticketFactory.getTicketDetails(ticketId);
-      // ticketDetails is an array, indexing is okay
-      expect(ticketDetails[5]).to.be.true; // isResale
-      expect(ticketDetails[6]).to.equal(ZONE_PRICES[0]); // resalePrice
+      expect(ticketDetails[5]).to.be.true;                 // isResale
+      expect(ticketDetails[6]).to.equal(ZONE_PRICES[0]);   // resalePrice
       
       // 4. Resale Purchase
-      const resaleTx = await ticketFactory.connect(buyer2).purchaseResaleTicket(ticketId, {
+      await ticketFactory.connect(buyer2).purchaseResaleTicket(ticketId, {
         value: ZONE_PRICES[0]
       });
-      await resaleTx.wait();
       
-      const newOwner = await ticketFactory.ownerOf(ticketId);
-      expect(newOwner.toLowerCase()).to.equal(buyer2.address.toLowerCase());
+      expect(await ticketFactory.ownerOf(ticketId)).to.equal(buyer2.address);
       
       // 5. Event Cancellation and Refunds
-      const cancelTx = await eventManager.connect(organizer).cancelEvent(eventId);
-      await cancelTx.wait();
+      await eventManager.connect(organizer).cancelEvent(eventId);
       
-      const updatedEventData = await getEventData(eventManager, eventId);
-      expect(updatedEventData.cancelled).to.be.true;
+      const updatedEventData = await eventManager.getEventData(eventId);
+      expect(updatedEventData[4]).to.be.true;  // cancelled status
       
       const initialBalance = await ethers.provider.getBalance(buyer2.address);
       const refundTx = await refundEscrow.connect(buyer2).processEventCancellationRefund(BigInt(eventId), ticketId);
@@ -144,12 +130,12 @@ describe("Ticketing System Integration", function () {
       expect(finalBalance + gasUsed).to.be.gt(initialBalance);
     });
 
+    // Rest of the tests remain the same...
     it("should verify zone details correctly", async function () {
       const zoneCount = await eventManager.getZoneCount(eventId);
       
       for (let i = 0; i < Number(zoneCount); i++) {
         const zone = await eventManager.getZone(eventId, i);
-        // zone has named properties: capacity, price, availableSeats
         expect(zone.capacity).to.equal(ZONE_CAPACITIES[i]);
         expect(zone.price).to.equal(ZONE_PRICES[i]);
         expect(zone.availableSeats).to.equal(ZONE_CAPACITIES[i]);
@@ -178,7 +164,9 @@ describe("Ticketing System Integration", function () {
       await purchaseTx.wait();
       
       const ticketId = 1n;
-      // Manually deposit payment into RefundEscrow so refunds work correctly:
+      // Issue ticket in TicketFactory
+      await ticketFactory.connect(owner).issueTicket(buyer1.address, eventId, 1);
+      
       await refundEscrow.connect(buyer1).depositPayment(BigInt(eventId), ticketId, { value: ZONE_PRICES[0] });
 
       const initialBalance = await ethers.provider.getBalance(buyer1.address);

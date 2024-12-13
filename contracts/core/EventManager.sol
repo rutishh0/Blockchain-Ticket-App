@@ -15,7 +15,7 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
     // eventId => Event struct
     mapping(uint256 => Event) private _events;
     // eventId => zoneId => Zone struct
-    mapping(uint256 => mapping(uint256 => Zone)) private _eventZones; 
+    mapping(uint256 => mapping(uint256 => Zone)) private _eventZones;
     // eventId => user => bool (true if user has a ticket for this event)
     mapping(uint256 => mapping(address => bool)) private _hasTicket;
     // eventId => accumulated revenue for organizer
@@ -26,13 +26,17 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
     uint256 public constant PLATFORM_FEE_PERCENTAGE = 5;
     uint256 public constant MIN_EVENT_DELAY = 1 days;
 
-    event RevenueWithdrawn(uint256 indexed eventId, address indexed organizer, uint256 amount);
+    // Add the missing event declarations here
     event RefundEscrowUpdated(address indexed newEscrow);
+    event RevenueWithdrawn(uint256 indexed eventId, address indexed organizer, uint256 amount);
 
     constructor() Ownable(msg.sender) {
         _eventIds = 0;
         _ticketIds = 0;
     }
+
+    // Rest of the contract remains exactly the same...
+    // ... all other functions remain unchanged ...
 
     function setRefundEscrow(address newEscrow) external onlyOwner {
         require(newEscrow != address(0), "Invalid escrow address");
@@ -137,9 +141,6 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
             require(refundSuccess, "Refund failed");
         }
 
-        // Do NOT deposit into refundEscrow here.
-        // Avoids double payments. Tests or external calls will handle refunds.
-
         emit TicketPurchased(eventId, newTicketId, msg.sender);
     }
 
@@ -163,6 +164,7 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
     function getEvent(uint256 eventId) external view override returns (EventView memory) {
         require(eventId <= _eventIds && eventId > 0, "Event ID does not exist");
         Event storage event_ = _events[eventId];
+        
         return EventView({
             name: event_.name,
             date: event_.date,
@@ -171,6 +173,26 @@ contract EventManager is IEventManager, Ownable, ReentrancyGuard, Pausable {
             cancelled: event_.cancelled,
             zoneCount: event_.zoneCount
         });
+    }
+
+    function getEventData(uint256 eventId) external view returns (
+        string memory name,
+        uint256 date,
+        uint256 basePrice,
+        address organizer,
+        bool cancelled,
+        uint256 zoneCount
+    ) {
+        require(eventId <= _eventIds && eventId > 0, "Event ID does not exist");
+        Event storage event_ = _events[eventId];
+        return (
+            event_.name,
+            event_.date,
+            event_.basePrice,
+            event_.organizer,
+            event_.cancelled,
+            event_.zoneCount
+        );
     }
 
     function getZone(uint256 eventId, uint256 zoneId) external view override returns (Zone memory) {
